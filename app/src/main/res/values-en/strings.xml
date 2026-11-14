@@ -1218,4 +1218,7 @@
     <string name="listing_deactivated_by_admin_notice">Deactivated by an administrator. Reason: %1$s</string>
     <string name="status_deactivated_by_admin">Deactivated by administrator</string>
     <string name="listing_reactivate_blocked_by_admin">This listing was deactivated by an administrator. Only an administrator can reactivate it.</string>
+
+    <string name="signup_pw_err_special">At least one special character (!@#$%*?._-)</string>
+    <string name="signup_pw_err_sequence">No sequences like 123, abc, 321 or cba</string>
 </resources>

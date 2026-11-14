@@ -33,6 +33,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
@@ -82,6 +84,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.equipo4.nearhome.R
+import com.equipo4.nearhome.util.PasswordValidator
 import kotlinx.coroutines.delay
 
 @Composable
@@ -220,6 +223,8 @@ private fun SignUpFormContent(
                     placeholder = "*****************",
                     isPassword = true
                 )
+                Spacer(modifier = Modifier.height(8.dp))
+                PasswordRulesChecklist(password = uiState.password)
 
                 if (uiState.showPasswordError && uiState.passwordErrorMessage != null) {
                     Spacer(modifier = Modifier.height(4.dp))
@@ -679,6 +684,30 @@ private fun VerifiedSuccessContent() {
                     tint = Color.White,
                     modifier = Modifier.size(100.dp)
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun PasswordRulesChecklist(password: String) {
+    if (password.isEmpty()) return
+    val rules = listOf(
+        stringResource(R.string.signup_pw_err_length) to PasswordValidator.hasMinLength(password),
+        stringResource(R.string.signup_pw_err_upper) to PasswordValidator.hasUppercase(password),
+        stringResource(R.string.signup_pw_err_lower) to PasswordValidator.hasLowercase(password),
+        stringResource(R.string.signup_pw_err_digit) to PasswordValidator.hasDigit(password),
+        stringResource(R.string.signup_pw_err_special) to PasswordValidator.hasSpecialChar(password),
+        stringResource(R.string.signup_pw_err_sequence) to PasswordValidator.hasNoSequences(password)
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        rules.forEach { (text, met) ->
+            val color = if (met) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
+            val icon = if (met) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, null, tint = color, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(text, color = color, fontSize = 11.sp)
             }
         }
     }
