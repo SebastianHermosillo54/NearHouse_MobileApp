@@ -1,5 +1,8 @@
 package com.equipo4.nearhome.ui.auth.login
 
+import com.equipo4.nearhome.ui.common.NearHomeAlertDialog
+import com.equipo4.nearhome.ui.common.DialogTitle
+
 import com.equipo4.nearhome.ui.common.nearHouseLogoPainter
 import android.widget.Toast
 import androidx.compose.foundation.Image
@@ -84,10 +87,10 @@ fun LoginScreen(
     }
 
     if (uiState.showReactivateDialog) {
-        AlertDialog(
+        NearHomeAlertDialog(
             onDismissRequest = { viewModel.onDismissReactivateDialog() },
             title = {
-                Text(
+                DialogTitle(
                     stringResource(
                         if (uiState.reactivateIsDeletion) R.string.login_keep_title else R.string.login_reactivate_title
                     )

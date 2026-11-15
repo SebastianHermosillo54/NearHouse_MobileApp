@@ -44,16 +44,19 @@ class SubscriptionRepository(context: Context) {
         }
 
     /**
-     * TODO: el API todavía no tiene endpoint de cancelación.
-     * Hoy solo cambia el estado local; el servidor sigue dejando publicar hasta que venza el plan.
+     * Cancela el plan en el servidor: el usuario pasa a Comprador y sus anuncios se ocultan.
+     * Se guarda el token y el usuario que devuelve el API, igual que al contratar.
      */
-    suspend fun cancelarPlan(): Resultado<UsuarioMeDto> {
-        val actual = CurrentUserStore.user.value
-            ?: return Resultado.Error("NO_USER")
-        val actualizado = actual.copy(plan = null)
-        CurrentUserStore.set(actualizado)
-        return Resultado.Ok(actualizado)
-    }
+    suspend fun cancelarPlan(): Resultado<UsuarioMeDto> =
+        when (val r = llamar { api.cancelarPlan() }) {
+            is Resultado.Ok -> {
+                session.saveToken(r.valor.token)
+                session.saveUser(name = r.valor.usuario.nombre, role = r.valor.usuario.rol)
+                CurrentUserStore.set(r.valor.usuario)
+                Resultado.Ok(r.valor.usuario)
+            }
+            is Resultado.Error -> Resultado.Error(r.mensaje, r.codigo)
+        }
 
     private suspend fun <T> llamar(bloque: suspend () -> Response<T>): Resultado<T> = try {
         val respuesta = bloque()

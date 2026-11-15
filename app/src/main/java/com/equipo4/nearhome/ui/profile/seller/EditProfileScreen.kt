@@ -1,5 +1,8 @@
 package com.equipo4.nearhome.ui.profile.seller
 
+import com.equipo4.nearhome.ui.common.NearHomeAlertDialog
+import com.equipo4.nearhome.ui.common.DialogTitle
+
 import android.Manifest
 import android.content.Intent
 import android.net.Uri
@@ -308,9 +311,9 @@ fun EditProfileScreen(
     }
 
     if (uiState.showDiscardDialog) {
-        AlertDialog(
+        NearHomeAlertDialog(
             onDismissRequest = { viewModel.dismissDiscardDialog() },
-            title = { Text(stringResource(R.string.edit_profile_discard_title)) },
+            title = { DialogTitle(stringResource(R.string.edit_profile_discard_title)) },
             text = { Text(stringResource(R.string.edit_profile_discard_message)) },
             confirmButton = {
                 TextButton(
@@ -331,9 +334,9 @@ fun EditProfileScreen(
     }
 
     if (uiState.showCameraPermissionRationale) {
-        AlertDialog(
+        NearHomeAlertDialog(
             onDismissRequest = { viewModel.setShowCameraPermissionRationale(false) },
-            title = { Text(stringResource(R.string.edit_profile_camera_permission_title)) },
+            title = { DialogTitle(stringResource(R.string.edit_profile_camera_permission_title)) },
             text = { Text(stringResource(R.string.edit_profile_camera_permission_message)) },
             confirmButton = {
                 TextButton(

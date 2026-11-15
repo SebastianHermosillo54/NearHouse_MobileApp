@@ -1,5 +1,8 @@
 package com.equipo4.nearhome.ui.admin.appeals
 
+import com.equipo4.nearhome.ui.common.NearHomeAlertDialog
+import com.equipo4.nearhome.ui.common.DialogTitle
+
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -601,9 +604,9 @@ private fun ResolveAppealDialog(
         }
     )
 
-    AlertDialog(
+    NearHomeAlertDialog(
         onDismissRequest = { if (!enviando) onDismiss() },
-        title = { Text(titulo) },
+        title = { DialogTitle(titulo) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(text = efecto, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)

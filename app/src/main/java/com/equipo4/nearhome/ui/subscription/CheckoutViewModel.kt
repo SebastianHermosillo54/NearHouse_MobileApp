@@ -140,10 +140,7 @@ class CheckoutViewModel(
             when (val r = repo.contratar(plan.id)) {
                 is Resultado.Ok -> {
                     isLoading.value = false
-                    val fecha = r.valor.plan?.let { PlanDates.formatear(it.fechaVencimiento, Locale.getDefault()) } ?: ""
-                    successMessage.value = AppStrings.get(R.string.success_plan_active_until, plan.name, fecha)
-                    delay(2200)
-                    onSuccessNavigation(plan.name) // <-- CAMBIO: pasa el nombre del plan
+                    onSuccessNavigation(plan.name)
                 }
                 is Resultado.Error -> {
                     isLoading.value = false

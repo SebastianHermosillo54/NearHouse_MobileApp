@@ -1,5 +1,7 @@
 package com.equipo4.nearhome.ui.auth.recover
 
+import com.equipo4.nearhome.ui.common.PasswordRulesList
+
 import android.util.Patterns
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -255,12 +257,7 @@ fun RecoverPasswordScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Text(
-                        text = "mínimo 6 caracteres",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    PasswordRulesList(password = uiState.newPasswordInput, modifier = Modifier.fillMaxWidth())
 
                     OutlinedTextField(
                         value = uiState.confirmPasswordInput,

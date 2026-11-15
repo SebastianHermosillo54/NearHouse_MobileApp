@@ -1,5 +1,7 @@
 package com.equipo4.nearhome.ui.auth.recover
 
+import com.equipo4.nearhome.util.PasswordValidator
+
 enum class RecoverStep {
     REQUEST_CODE,
     VERIFY_CODE,
@@ -24,9 +26,8 @@ data class RecoverPasswordUiState(
 ) {
     val isNewPasswordFormValid: Boolean
         get() {
-            val hasMinLength = newPasswordInput.length >= 6
             val isConfirmed = newPasswordInput == confirmPasswordInput
-            return hasMinLength && isConfirmed && !isSavingPassword
+            return PasswordValidator.isValid(newPasswordInput) && isConfirmed && !isSavingPassword
         }
 }
 

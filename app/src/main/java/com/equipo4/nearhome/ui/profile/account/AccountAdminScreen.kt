@@ -37,9 +37,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.equipo4.nearhome.R
+import com.equipo4.nearhome.ui.common.DialogIcon
+import com.equipo4.nearhome.ui.common.DialogTitle
+import com.equipo4.nearhome.ui.common.NearHomeAlertDialog
 import com.equipo4.nearhome.data.remote.GoogleAuthManager
 import com.equipo4.nearhome.data.remote.TelefonoFirebase
 import com.equipo4.nearhome.ui.common.NearHomeBottomBar
+import com.equipo4.nearhome.ui.common.PasswordRulesList
 import com.equipo4.nearhome.ui.profile.UserRole
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthProvider
@@ -67,6 +71,13 @@ fun AccountAdminRoute(
             val msg = "Tu cuenta está desactivada. Para volver, solo inicia sesión"
             Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
             onNavigateToLogin(msg)
+        }
+    }
+
+    // NUEVO: Navegar al login cuando se elimina la cuenta
+    LaunchedEffect(uiState.isDeletedSuccess) {
+        if (uiState.isDeletedSuccess) {
+            onNavigateToLogin("Tu cuenta se eliminará en 30 días")
         }
     }
 
@@ -106,6 +117,7 @@ fun AccountAdminScreen(
     var isConfirmPasswordVisible by remember { mutableStateOf(false) }
     var isEmailCurrentPasswordVisible by remember { mutableStateOf(false) }
     var isPhoneCurrentPasswordVisible by remember { mutableStateOf(false) }
+    var isDeletePasswordVisible by remember { mutableStateOf(false) }
 
     // Variables locales para el flujo de SMS de cambio de teléfono
     var smsVerificationId by remember { mutableStateOf<String?>(null) }
@@ -237,37 +249,61 @@ fun AccountAdminScreen(
 
                 val planName = userData.planName
 
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surface
-                ) {
-                    OptionRowItem(
-                        icon = Icons.Outlined.PublishedWithChanges,
-                        title = stringResource(id = R.string.label_current_plan),
-                        subtitle = if (planName != null) {
-                            val statusText = if (!userData.planStatus.isNullOrEmpty()) " (${userData.planStatus})" else ""
-                            "$planName$statusText"
-                        } else {
-                            stringResource(id = R.string.buyer_no_plan)
-                        },
-                        secondLine = when {
-                            planName == null -> stringResource(id = R.string.buyer_plan_subtitle)
-                            userData.planExpired -> stringResource(id = R.string.plan_expired_format, userData.renewalDate.orEmpty())
-                            else -> stringResource(id = R.string.plan_expires_format, userData.renewalDate.orEmpty())
-                        },
-                        secondLineColor = if (userData.planExpired) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        useIconContainer = true,
-                        iconBackgroundColor = MaterialTheme.colorScheme.surfaceVariant,
-                        iconTintColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        onClick = onNavigateToPlans
-                    )
+                Column {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surface
+                    ) {
+                        OptionRowItem(
+                            icon = Icons.Outlined.PublishedWithChanges,
+                            title = stringResource(id = R.string.label_current_plan),
+                            subtitle = if (planName != null) {
+                                val statusText = if (!userData.planStatus.isNullOrEmpty()) " (${userData.planStatus})" else ""
+                                "$planName$statusText"
+                            } else {
+                                stringResource(id = R.string.buyer_no_plan)
+                            },
+                            secondLine = when {
+                                planName == null -> stringResource(id = R.string.buyer_plan_subtitle)
+                                userData.planExpired -> stringResource(id = R.string.plan_expired_format, userData.renewalDate.orEmpty())
+                                else -> stringResource(id = R.string.plan_expires_format, userData.renewalDate.orEmpty())
+                            },
+                            secondLineColor = if (userData.planExpired) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            useIconContainer = true,
+                            iconBackgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                            iconTintColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            onClick = onNavigateToPlans
+                        )
+                    }
+
+                    // NUEVO: Cancelar suscripción (solo para vendedores con plan activo)
+                    if (userData.role == UserRole.VENDEDOR && planName != null) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 6.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surface
+                        ) {
+                            OptionRowItem(
+                                icon = Icons.Outlined.Cancel,
+                                title = "Cancelar suscripción",
+                                subtitle = "Tus anuncios se ocultan, pero no se borran. Puedes contratar otro plan después.",
+                                titleColor = MaterialTheme.colorScheme.error,
+                                useIconContainer = true,
+                                iconBackgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                                iconTintColor = MaterialTheme.colorScheme.error,
+                                onClick = { onEvent(AccountAdminUiEvent.OnCancelPlanRequested) }
+                            )
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -323,11 +359,11 @@ fun AccountAdminScreen(
     if (uiState.phoneStep == PhoneFlowStep.NEW_PHONE) {
         val hasPass = uiState.userData?.tieneContrasena == true
 
-        AlertDialog(
+        NearHomeAlertDialog(
             onDismissRequest = {
                 if (!uiState.isPhoneValidating) onEvent(AccountAdminUiEvent.OnPhoneFlowDismissed)
             },
-            title = { Text("Cambiar número de teléfono") },
+            title = { DialogTitle("Cambiar número de teléfono") },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -344,6 +380,10 @@ fun AccountAdminScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         OutlinedTextField(
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                                fontSize = 16.sp
+                            ),
                             value = uiState.countryCodeInput,
                             onValueChange = { onEvent(AccountAdminUiEvent.OnCountryCodeChanged(it)) },
                             label = { Text("País") },
@@ -353,6 +393,10 @@ fun AccountAdminScreen(
                         )
 
                         OutlinedTextField(
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                                fontSize = 16.sp
+                            ),
                             value = uiState.newPhoneInput,
                             onValueChange = { onEvent(AccountAdminUiEvent.OnNewPhoneChanged(it)) },
                             label = { Text("Teléfono nuevo") },
@@ -374,6 +418,10 @@ fun AccountAdminScreen(
 
                     if (hasPass) {
                         OutlinedTextField(
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                                fontSize = 16.sp
+                            ),
                             value = uiState.phoneCurrentPasswordInput,
                             onValueChange = { onEvent(AccountAdminUiEvent.OnPhoneCurrentPasswordChanged(it)) },
                             label = { Text("Contraseña actual") },
@@ -499,11 +547,11 @@ fun AccountAdminScreen(
         val isConfirmEnabled = fullCode.length == 6 && !uiState.isPhoneSaving
         val focusRequesters = remember { List(6) { FocusRequester() } }
 
-        AlertDialog(
+        NearHomeAlertDialog(
             onDismissRequest = {
                 if (!uiState.isPhoneSaving) onEvent(AccountAdminUiEvent.OnPhoneFlowDismissed)
             },
-            title = { Text("Verificación por SMS") },
+            title = { DialogTitle("Verificación por SMS") },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -516,7 +564,6 @@ fun AccountAdminScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    // 6 casillas OTP
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
                         modifier = Modifier.fillMaxWidth()
@@ -537,7 +584,7 @@ fun AccountAdminScreen(
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier
-                                    .width(44.dp)
+                                    .weight(1f)
                                     .height(54.dp)
                                     .focusRequester(focusRequesters[i])
                             )
@@ -560,7 +607,6 @@ fun AccountAdminScreen(
                     onClick = {
                         val vid = smsVerificationId
                         if (vid == null) {
-                            // Modo dev/mock sin SMS real
                             onEvent(AccountAdminUiEvent.OnConfirmPhoneSmsSubmitted("123456"))
                         } else {
                             coroutineScope.launch {
@@ -600,15 +646,15 @@ fun AccountAdminScreen(
 
     // ==================== FLUJO DE CAMBIO DE CORREO ====================
 
-    // PASO 1: PANTALLA / DIÁLOGO "CAMBIAR CORREO"
+    // PASO 1: "CAMBIAR CORREO"
     if (uiState.emailStep == EmailFlowStep.NEW_EMAIL) {
         val hasPass = uiState.userData?.tieneContrasena == true
 
-        AlertDialog(
+        NearHomeAlertDialog(
             onDismissRequest = {
                 if (!uiState.isEmailCodeSending) onEvent(AccountAdminUiEvent.OnEmailFlowDismissed)
             },
-            title = { Text("Cambiar correo electrónico") },
+            title = { DialogTitle("Cambiar correo electrónico") },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -621,6 +667,10 @@ fun AccountAdminScreen(
                     )
 
                     OutlinedTextField(
+                        textStyle = androidx.compose.ui.text.TextStyle(
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                            fontSize = 16.sp
+                        ),
                         value = uiState.newEmailInput,
                         onValueChange = { onEvent(AccountAdminUiEvent.OnNewEmailChanged(it)) },
                         label = { Text("Correo nuevo") },
@@ -640,6 +690,10 @@ fun AccountAdminScreen(
 
                     if (hasPass) {
                         OutlinedTextField(
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                                fontSize = 16.sp
+                            ),
                             value = uiState.emailCurrentPasswordInput,
                             onValueChange = { onEvent(AccountAdminUiEvent.OnEmailCurrentPasswordChanged(it)) },
                             label = { Text("Contraseña actual") },
@@ -718,17 +772,17 @@ fun AccountAdminScreen(
         )
     }
 
-    // PASO 2: PANTALLA / DIÁLOGO "VERIFICA TU NUEVO CORREO"
+    // PASO 2: "VERIFICA TU NUEVO CORREO"
     if (uiState.emailStep == EmailFlowStep.VERIFY_CODE) {
         val fullCode = uiState.emailOtpCode.joinToString("")
         val isConfirmEnabled = fullCode.length == 6 && !uiState.isEmailConfirming
         val focusRequesters = remember { List(6) { FocusRequester() } }
 
-        AlertDialog(
+        NearHomeAlertDialog(
             onDismissRequest = {
                 if (!uiState.isEmailConfirming) onEvent(AccountAdminUiEvent.OnEmailFlowDismissed)
             },
-            title = { Text("Verifica tu nuevo correo") },
+            title = { DialogTitle("Verifica tu nuevo correo") },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -741,7 +795,6 @@ fun AccountAdminScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    // 6 casillas OTP
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
                         modifier = Modifier.fillMaxWidth()
@@ -759,7 +812,7 @@ fun AccountAdminScreen(
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier
-                                    .width(44.dp)
+                                    .weight(1f)
                                     .height(54.dp)
                                     .focusRequester(focusRequesters[i])
                             )
@@ -832,12 +885,12 @@ fun AccountAdminScreen(
     // PASO 1: AVISO AL TOCAR "CONTRASEÑA"
     if (uiState.passwordStep == PasswordFlowStep.CONFIRM_SEND_CODE) {
         val hasPass = uiState.userData?.tieneContrasena == true
-        AlertDialog(
+        NearHomeAlertDialog(
             onDismissRequest = {
                 if (!uiState.isOtpLoading) onEvent(AccountAdminUiEvent.OnPasswordFlowDismissed)
             },
             title = {
-                Text(
+                DialogTitle(
                     text = if (hasPass) "¿Quieres cambiar tu contraseña?" else "¿Quieres crear una contraseña?"
                 )
             },
@@ -892,11 +945,11 @@ fun AccountAdminScreen(
         val isVerifyEnabled = fullCode.length == 6 && !uiState.isOtpLoading
         val focusRequesters = remember { List(6) { FocusRequester() } }
 
-        AlertDialog(
+        NearHomeAlertDialog(
             onDismissRequest = {
                 if (!uiState.isOtpLoading) onEvent(AccountAdminUiEvent.OnPasswordFlowDismissed)
             },
-            title = { Text("Verifica tu correo") },
+            title = { DialogTitle("Verifica tu correo") },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -909,7 +962,6 @@ fun AccountAdminScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    // 6 casillas OTP
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
                         modifier = Modifier.fillMaxWidth()
@@ -927,7 +979,7 @@ fun AccountAdminScreen(
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier
-                                    .width(44.dp)
+                                    .weight(1f)
                                     .height(54.dp)
                                     .focusRequester(focusRequesters[i])
                             )
@@ -943,7 +995,6 @@ fun AccountAdminScreen(
                         )
                     }
 
-                    // Enlace Reenviar código
                     TextButton(
                         onClick = { onEvent(AccountAdminUiEvent.OnResendCodeRequested) },
                         enabled = uiState.canResendCode && !uiState.isOtpLoading
@@ -987,12 +1038,12 @@ fun AccountAdminScreen(
     if (uiState.passwordStep == PasswordFlowStep.NEW_PASSWORD) {
         val hasPass = uiState.userData?.tieneContrasena == true
 
-        AlertDialog(
+        NearHomeAlertDialog(
             onDismissRequest = {
                 if (!uiState.isPasswordSaving) onEvent(AccountAdminUiEvent.OnPasswordFlowDismissed)
             },
             title = {
-                Text(
+                DialogTitle(
                     text = if (hasPass) "Nueva contraseña" else "Crear contraseña"
                 )
             },
@@ -1003,6 +1054,10 @@ fun AccountAdminScreen(
                 ) {
                     if (hasPass) {
                         OutlinedTextField(
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                                fontSize = 16.sp
+                            ),
                             value = uiState.currentPasswordInput,
                             onValueChange = { onEvent(AccountAdminUiEvent.OnCurrentPasswordChanged(it)) },
                             label = { Text("Contraseña actual") },
@@ -1031,6 +1086,10 @@ fun AccountAdminScreen(
                     }
 
                     OutlinedTextField(
+                        textStyle = androidx.compose.ui.text.TextStyle(
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                            fontSize = 16.sp
+                        ),
                         value = uiState.newPasswordInput,
                         onValueChange = { onEvent(AccountAdminUiEvent.OnNewPasswordChanged(it)) },
                         label = { Text("Nueva contraseña") },
@@ -1049,13 +1108,16 @@ fun AccountAdminScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Text(
-                        text = "mínimo 6 caracteres",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    PasswordRulesList(
+                        password = uiState.newPasswordInput,
+                        modifier = Modifier.fillMaxWidth()
                     )
 
                     OutlinedTextField(
+                        textStyle = androidx.compose.ui.text.TextStyle(
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                            fontSize = 16.sp
+                        ),
                         value = uiState.confirmPasswordInput,
                         onValueChange = { onEvent(AccountAdminUiEvent.OnConfirmPasswordChanged(it)) },
                         label = { Text("Confirmar nueva contraseña") },
@@ -1110,69 +1172,100 @@ fun AccountAdminScreen(
         )
     }
 
-    // ==================== DIÁLOGOS DE DESACTIVACIÓN Y ELIMINACIÓN ====================
+    // ==================== DIÁLOGOS DE DESACTIVAR, ELIMINAR Y CANCELAR PLAN ====================
+    val hasPassCuenta = uiState.userData?.tieneContrasena == true
+    val dangerColor = Color(0xFFDC2626)
+    val accentColor = Color(0xFF41688F)
+    val textoCentrado = androidx.compose.ui.text.style.TextAlign.Center
+
+    // Desactivar cuenta: con contraseña, o con Google si la cuenta no tiene contraseña
     if (uiState.showDeactivateDialog) {
-        AlertDialog(
+        NearHomeAlertDialog(
             onDismissRequest = {
-                if (!uiState.isDeactivating) {
-                    onEvent(AccountAdminUiEvent.OnDeactivateDismissed)
-                }
+                if (!uiState.isDeactivating) onEvent(AccountAdminUiEvent.OnDeactivateDismissed)
             },
-            title = { Text(text = stringResource(id = R.string.dialog_deactivate_title)) },
+            icon = { DialogIcon(Icons.Outlined.PowerSettingsNew, accentColor) },
+            title = { DialogTitle(text = stringResource(id = R.string.dialog_deactivate_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(text = stringResource(id = R.string.dialog_deactivate_text))
-
-                    OutlinedTextField(
-                        value = uiState.deactivatePasswordInput,
-                        onValueChange = { onEvent(AccountAdminUiEvent.OnDeactivatePasswordChanged(it)) },
-                        label = { Text("Contraseña actual") },
-                        singleLine = true,
-                        enabled = !uiState.isDeactivating,
-                        visualTransformation = if (isCurrentPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            IconButton(onClick = { isCurrentPasswordVisible = !isCurrentPasswordVisible }) {
-                                Icon(
-                                    imageVector = if (isCurrentPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                    contentDescription = "Mostrar u ocultar contraseña"
-                                )
-                            }
-                        },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        modifier = Modifier.fillMaxWidth()
+                    Text(
+                        text = stringResource(id = R.string.dialog_deactivate_text),
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp,
+                        textAlign = textoCentrado,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+
+                    if (hasPassCuenta) {
+                        OutlinedTextField(
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                                fontSize = 16.sp
+                            ),
+                            value = uiState.deactivatePasswordInput,
+                            onValueChange = { onEvent(AccountAdminUiEvent.OnDeactivatePasswordChanged(it)) },
+                            label = { Text("Contraseña actual") },
+                            singleLine = true,
+                            enabled = !uiState.isDeactivating,
+                            visualTransformation = if (isCurrentPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            trailingIcon = {
+                                IconButton(onClick = { isCurrentPasswordVisible = !isCurrentPasswordVisible }) {
+                                    Icon(
+                                        imageVector = if (isCurrentPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                        contentDescription = "Mostrar u ocultar contraseña"
+                                    )
+                                }
+                            },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
 
                     if (uiState.deactivateError != null) {
                         Text(
                             text = uiState.deactivateError,
-                            color = MaterialTheme.colorScheme.error,
-                            fontSize = 13.sp
+                            fontSize = 13.sp,
+                            textAlign = textoCentrado,
+                            color = dangerColor
                         )
                     }
                 }
             },
             confirmButton = {
                 Button(
-                    enabled = uiState.deactivatePasswordInput.isNotBlank() && !uiState.isDeactivating,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    ),
-                    onClick = { onEvent(AccountAdminUiEvent.OnDeactivateConfirmed()) }
+                    modifier = Modifier.height(46.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = (!hasPassCuenta || uiState.deactivatePasswordInput.isNotBlank()) && !uiState.isDeactivating,
+                    colors = ButtonDefaults.buttonColors(containerColor = accentColor, contentColor = Color.White),
+                    onClick = {
+                        if (hasPassCuenta) {
+                            onEvent(AccountAdminUiEvent.OnDeactivateConfirmed(null))
+                        } else {
+                            coroutineScope.launch {
+                                googleAuthManager.getFirebaseIdToken()
+                                    .onSuccess { token ->
+                                        if (token != null) onEvent(AccountAdminUiEvent.OnDeactivateConfirmed(token))
+                                    }
+                                    .onFailure { e ->
+                                        Toast.makeText(context, e.message ?: "Error al verificar con Google", Toast.LENGTH_LONG).show()
+                                    }
+                            }
+                        }
+                    }
                 ) {
                     if (uiState.isDeactivating) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            color = MaterialTheme.colorScheme.onError,
-                            strokeWidth = 2.dp
-                        )
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
                     } else {
-                        Text(text = stringResource(id = R.string.confirm_deactivate))
+                        Text(
+                            text = if (hasPassCuenta) stringResource(id = R.string.confirm_deactivate) else "Confirmar con Google",
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                 }
             },
             dismissButton = {
                 TextButton(
+                    modifier = Modifier.height(46.dp),
                     enabled = !uiState.isDeactivating,
                     onClick = { onEvent(AccountAdminUiEvent.OnDeactivateDismissed) }
                 ) {
@@ -1182,44 +1275,166 @@ fun AccountAdminScreen(
         )
     }
 
+    // Eliminar cuenta: con contraseña si la cuenta la tiene; si es de Google, con el token de Google
     if (uiState.showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { onEvent(AccountAdminUiEvent.OnDeleteDismissed) },
-            title = {
-                Text(
-                    text = stringResource(id = R.string.dialog_delete_title),
-                    color = MaterialTheme.colorScheme.error
-                )
+        val passValid = !hasPassCuenta || uiState.deletePasswordInput.isNotBlank()
+        NearHomeAlertDialog(
+            onDismissRequest = {
+                if (!uiState.isDeleting) onEvent(AccountAdminUiEvent.OnDeleteDismissed)
             },
+            icon = { DialogIcon(Icons.Outlined.Delete, dangerColor) },
+            title = { DialogTitle(text = stringResource(id = R.string.dialog_delete_title), color = dangerColor) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(text = stringResource(id = R.string.dialog_delete_text))
+                    Text(
+                        text = stringResource(id = R.string.dialog_delete_text),
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp,
+                        textAlign = textoCentrado,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    if (hasPassCuenta) {
+                        OutlinedTextField(
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                                fontSize = 16.sp
+                            ),
+                            value = uiState.deletePasswordInput,
+                            onValueChange = { onEvent(AccountAdminUiEvent.OnDeletePasswordChanged(it)) },
+                            label = { Text("Contraseña actual") },
+                            singleLine = true,
+                            enabled = !uiState.isDeleting,
+                            visualTransformation = if (isDeletePasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            trailingIcon = {
+                                IconButton(onClick = { isDeletePasswordVisible = !isDeletePasswordVisible }) {
+                                    Icon(
+                                        imageVector = if (isDeletePasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                        contentDescription = "Mostrar u ocultar contraseña"
+                                    )
+                                }
+                            },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
                     OutlinedTextField(
+                        textStyle = androidx.compose.ui.text.TextStyle(
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                            fontSize = 16.sp
+                        ),
                         value = uiState.deleteInputText,
-                        onValueChange = { newText ->
-                            onEvent(AccountAdminUiEvent.OnDeleteInputChanged(newText))
-                        },
+                        onValueChange = { onEvent(AccountAdminUiEvent.OnDeleteInputChanged(it)) },
                         placeholder = { Text(text = stringResource(id = R.string.dialog_delete_placeholder)) },
                         singleLine = true,
+                        enabled = !uiState.isDeleting,
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    if (uiState.deleteError != null) {
+                        Text(
+                            text = uiState.deleteError,
+                            fontSize = 13.sp,
+                            textAlign = textoCentrado,
+                            color = dangerColor
+                        )
+                    }
                 }
             },
             confirmButton = {
                 Button(
-                    enabled = uiState.isDeleteButtonEnabled,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    ),
-                    onClick = { onEvent(AccountAdminUiEvent.OnDeleteConfirmed) }
+                    modifier = Modifier.height(46.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = uiState.isDeleteButtonEnabled && passValid && !uiState.isDeleting,
+                    colors = ButtonDefaults.buttonColors(containerColor = dangerColor, contentColor = Color.White),
+                    onClick = {
+                        if (hasPassCuenta) {
+                            onEvent(AccountAdminUiEvent.OnDeleteConfirmed(null))
+                        } else {
+                            coroutineScope.launch {
+                                googleAuthManager.getFirebaseIdToken()
+                                    .onSuccess { token ->
+                                        if (token != null) onEvent(AccountAdminUiEvent.OnDeleteConfirmed(token))
+                                    }
+                                    .onFailure { e ->
+                                        Toast.makeText(context, e.message ?: "Error al verificar con Google", Toast.LENGTH_LONG).show()
+                                    }
+                            }
+                        }
+                    }
                 ) {
-                    Text(text = stringResource(id = R.string.confirm_delete))
+                    if (uiState.isDeleting) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
+                    } else {
+                        Text(
+                            text = if (hasPassCuenta) stringResource(id = R.string.confirm_delete) else "Confirmar con Google",
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { onEvent(AccountAdminUiEvent.OnDeleteDismissed) }) {
+                TextButton(
+                    modifier = Modifier.height(46.dp),
+                    enabled = !uiState.isDeleting,
+                    onClick = { onEvent(AccountAdminUiEvent.OnDeleteDismissed) }
+                ) {
                     Text(text = stringResource(id = R.string.cancel))
+                }
+            }
+        )
+    }
+
+    // Cancelar plan: pide confirmación y muestra el error dentro del diálogo
+    if (uiState.showCancelPlanDialog) {
+        NearHomeAlertDialog(
+            onDismissRequest = {
+                if (!uiState.isCancellingPlan) onEvent(AccountAdminUiEvent.OnCancelPlanDismissed)
+            },
+            icon = { DialogIcon(Icons.Outlined.Cancel, dangerColor) },
+            title = { DialogTitle(text = "¿Cancelar suscripción?", color = dangerColor) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "Tus anuncios se ocultarán, pero no se borrarán. Podrás contratar otro plan cuando quieras.",
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp,
+                        textAlign = textoCentrado,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (uiState.cancelPlanError != null) {
+                        Text(
+                            text = uiState.cancelPlanError,
+                            fontSize = 13.sp,
+                            textAlign = textoCentrado,
+                            color = dangerColor
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    modifier = Modifier.height(46.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = !uiState.isCancellingPlan,
+                    colors = ButtonDefaults.buttonColors(containerColor = dangerColor, contentColor = Color.White),
+                    onClick = { onEvent(AccountAdminUiEvent.OnCancelPlanConfirmed) }
+                ) {
+                    if (uiState.isCancellingPlan) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
+                    } else {
+                        Text(text = "Sí, cancelar plan", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    modifier = Modifier.height(46.dp),
+                    enabled = !uiState.isCancellingPlan,
+                    onClick = { onEvent(AccountAdminUiEvent.OnCancelPlanDismissed) }
+                ) {
+                    Text(text = "Volver")
                 }
             }
         )

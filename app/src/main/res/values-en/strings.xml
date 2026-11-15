@@ -1327,4 +1327,11 @@
     <string name="appeal_confirmation_desc">The resolution was saved and the person who appealed was notified.</string>
     <string name="admin_conflict_listing">This listing is yours. Another administrator must review it.</string>
     <string name="admin_conflict_appeal">This appeal is yours or is about a decision you made. Another administrator must review it.</string>
+
+    <string name="pwd_rule_min_length">At least 8 characters</string>
+    <string name="pwd_rule_uppercase">One uppercase letter</string>
+    <string name="pwd_rule_lowercase">One lowercase letter</string>
+    <string name="pwd_rule_digit">One number</string>
+    <string name="pwd_rule_special">One special character (! @ # $ % &amp; * ? . _ -)</string>
+    <string name="pwd_rule_no_sequences">No 3 characters in order (abc, 123) or repeated (aaa, 111)</string>
 </resources>
