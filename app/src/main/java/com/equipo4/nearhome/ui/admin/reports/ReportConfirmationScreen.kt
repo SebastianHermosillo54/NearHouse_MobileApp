@@ -135,7 +135,7 @@ fun ReportConfirmationScreen(
                         ) {
                             Text(stringResource(R.string.report_date), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                             Text(
-                                text = report!!.attendedDate ?: "26 sep - 10:48",
+                                text = report!!.attendedDate.orEmpty(),
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 fontSize = 14.sp

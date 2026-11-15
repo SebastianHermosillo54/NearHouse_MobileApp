@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.IOException
+import com.equipo4.nearhome.R
+import com.equipo4.nearhome.util.AppStrings
 
 sealed class GoogleAuthState {
     object Idle : GoogleAuthState()
@@ -86,9 +88,9 @@ class GoogleAuthViewModel(
                     }
                 }
             } catch (_: IOException) {
-                _uiState.value = GoogleAuthState.Error("No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo de nuevo")
+                _uiState.value = GoogleAuthState.Error(AppStrings.get(R.string.network_error_connection))
             } catch (_: Exception) {
-                _uiState.value = GoogleAuthState.Error("Ocurrió un error inesperado. Inténtalo de nuevo")
+                _uiState.value = GoogleAuthState.Error(AppStrings.get(R.string.error_unexpected_retry))
             }
         }
     }
@@ -120,15 +122,15 @@ class GoogleAuthViewModel(
     }
 
     private fun extraerMensajeError(errorJson: String?): String {
-        if (errorJson.isNullOrBlank()) return "Error al procesar la solicitud"
+        if (errorJson.isNullOrBlank()) return AppStrings.get(R.string.error_processing_request)
         return try {
             val json = gson.fromJson(errorJson, JsonObject::class.java)
             json.get("error")?.asString
                 ?: json.get("mensaje")?.asString
                 ?: json.get("message")?.asString
-                ?: "Error al procesar la solicitud"
+                ?: AppStrings.get(R.string.error_processing_request)
         } catch (_: Exception) {
-            "Error al procesar la solicitud"
+            AppStrings.get(R.string.error_processing_request)
         }
     }
 

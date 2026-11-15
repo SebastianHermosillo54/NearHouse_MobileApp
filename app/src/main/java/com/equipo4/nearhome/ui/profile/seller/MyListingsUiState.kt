@@ -51,5 +51,7 @@ data class MyListingsUiState(
      * Admin, o vendedor con plan vigente. Solo así puede crear, editar y reactivar.
      * Si es false, los anuncios se ven pero no se pueden editar ni reactivar.
      */
-    val puedePublicar: Boolean = false
+    val puedePublicar: Boolean = false,
+    /** Canceló su plan y sigue vigente: fecha ISO hasta la que se ven sus anuncios. */
+    val planCanceladoVence: String? = null
 )

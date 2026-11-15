@@ -218,7 +218,7 @@ class LoginViewModel(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            errorMessage = error.message ?: "No se pudo iniciar sesión con Google. Inténtalo de nuevo."
+                            errorMessage = error.message ?: AppStrings.get(R.string.google_err_signin)
                         )
                     }
                 }

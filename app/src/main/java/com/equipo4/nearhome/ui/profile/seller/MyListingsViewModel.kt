@@ -66,7 +66,8 @@ class MyListingsViewModel(application: Application) : AndroidViewModel(applicati
                         userPhotoUrl = user?.takeIf { it.tieneFoto && it.fotoVersion != null }
                             ?.let { NetworkModule.fotoPerfilUrl(it.fotoVersion!!) },
                         role = role,
-                        puedePublicar = esAdmin || user?.plan?.vigente == true
+                        puedePublicar = esAdmin || user?.plan?.vigente == true,
+                        planCanceladoVence = user?.plan?.takeIf { p -> p.vigente && p.cancelado }?.fechaVencimiento
                     )
                 }
             }

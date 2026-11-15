@@ -26,7 +26,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import com.equipo4.nearhome.ui.subscription.PlanDates
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -68,7 +70,7 @@ fun AccountAdminRoute(
 
     LaunchedEffect(uiState.isDeactivatedSuccess) {
         if (uiState.isDeactivatedSuccess) {
-            val msg = "Tu cuenta está desactivada. Para volver, solo inicia sesión"
+            val msg = context.getString(R.string.acc_deactivated_msg)
             Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
             onNavigateToLogin(msg)
         }
@@ -77,7 +79,7 @@ fun AccountAdminRoute(
     // NUEVO: Navegar al login cuando se elimina la cuenta
     LaunchedEffect(uiState.isDeletedSuccess) {
         if (uiState.isDeletedSuccess) {
-            onNavigateToLogin("Tu cuenta se eliminará en 30 días")
+            onNavigateToLogin(context.getString(R.string.acc_delete_in_30_days))
         }
     }
 
@@ -232,7 +234,7 @@ fun AccountAdminScreen(
                             subtitle = if (userData.tieneContrasena) {
                                 stringResource(id = R.string.masked_password)
                             } else {
-                                "Entras con Google. Crea una contraseña para entrar también con tu correo."
+                                stringResource(R.string.acc_password_google_subtitle)
                             },
                             useIconContainer = true,
                             iconBackgroundColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -247,7 +249,17 @@ fun AccountAdminScreen(
                 // ==================== MEMBRESÍA Y PAGOS ====================
                 SectionHeader(title = stringResource(id = R.string.section_membership))
 
-                val planName = userData.planName
+                // Textos del plan: se arman aquí para que sigan el idioma elegido
+                val locale = LocalConfiguration.current.locales[0]
+                val planName = userData.planNombre?.let { stringResource(R.string.plan_full_name_format, it) }
+                val planStatus = when {
+                    userData.planNombre == null -> null
+                    !userData.planVigente -> stringResource(R.string.plan_status_expired)
+                    userData.planCancelado -> stringResource(R.string.plan_status_cancelled)
+                    else -> stringResource(R.string.plan_status_active)
+                }
+                val fechaPlan = userData.planVence?.let { PlanDates.formatear(it, locale) }.orEmpty()
+                val planExpired = userData.planNombre != null && !userData.planVigente
 
                 Column {
                     Surface(
@@ -261,17 +273,22 @@ fun AccountAdminScreen(
                             icon = Icons.Outlined.PublishedWithChanges,
                             title = stringResource(id = R.string.label_current_plan),
                             subtitle = if (planName != null) {
-                                val statusText = if (!userData.planStatus.isNullOrEmpty()) " (${userData.planStatus})" else ""
-                                "$planName$statusText"
+                                if (planStatus != null) {
+                                    stringResource(R.string.seller_plan_status_format, planName, planStatus)
+                                } else {
+                                    planName
+                                }
                             } else {
                                 stringResource(id = R.string.buyer_no_plan)
                             },
                             secondLine = when {
                                 planName == null -> stringResource(id = R.string.buyer_plan_subtitle)
-                                userData.planExpired -> stringResource(id = R.string.plan_expired_format, userData.renewalDate.orEmpty())
-                                else -> stringResource(id = R.string.plan_expires_format, userData.renewalDate.orEmpty())
+                                planExpired -> stringResource(id = R.string.plan_expired_format, fechaPlan)
+                                // Cancelado: ya no se renueva; sus anuncios se ven hasta esa fecha
+                                userData.planCancelado -> stringResource(id = R.string.plan_cancelled_until_format, fechaPlan)
+                                else -> stringResource(id = R.string.plan_expires_format, fechaPlan)
                             },
-                            secondLineColor = if (userData.planExpired) {
+                            secondLineColor = if (planExpired) {
                                 MaterialTheme.colorScheme.error
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
@@ -283,8 +300,8 @@ fun AccountAdminScreen(
                         )
                     }
 
-                    // NUEVO: Cancelar suscripción (solo para vendedores con plan activo)
-                    if (userData.role == UserRole.VENDEDOR && planName != null) {
+                    // Cancelar suscripción: solo vendedores con plan vigente que todavía no lo cancelan
+                    if (userData.role == UserRole.VENDEDOR && userData.planVigente && !userData.planCancelado) {
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -294,8 +311,8 @@ fun AccountAdminScreen(
                         ) {
                             OptionRowItem(
                                 icon = Icons.Outlined.Cancel,
-                                title = "Cancelar suscripción",
-                                subtitle = "Tus anuncios se ocultan, pero no se borran. Puedes contratar otro plan después.",
+                                title = stringResource(R.string.acc_cancel_plan_title),
+                                subtitle = stringResource(R.string.acc_cancel_plan_subtitle, fechaPlan),
                                 titleColor = MaterialTheme.colorScheme.error,
                                 useIconContainer = true,
                                 iconBackgroundColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -363,14 +380,14 @@ fun AccountAdminScreen(
             onDismissRequest = {
                 if (!uiState.isPhoneValidating) onEvent(AccountAdminUiEvent.OnPhoneFlowDismissed)
             },
-            title = { DialogTitle("Cambiar número de teléfono") },
+            title = { DialogTitle(stringResource(R.string.acc_change_phone_title)) },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = "Teléfono actual: ${uiState.userData?.phone.orEmpty()}",
+                        text = stringResource(R.string.acc_current_phone_format, uiState.userData?.phone.orEmpty()),
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -386,7 +403,7 @@ fun AccountAdminScreen(
                             ),
                             value = uiState.countryCodeInput,
                             onValueChange = { onEvent(AccountAdminUiEvent.OnCountryCodeChanged(it)) },
-                            label = { Text("País") },
+                            label = { Text(stringResource(R.string.acc_country_label)) },
                             singleLine = true,
                             enabled = !uiState.isPhoneValidating,
                             modifier = Modifier.width(80.dp)
@@ -399,7 +416,7 @@ fun AccountAdminScreen(
                             ),
                             value = uiState.newPhoneInput,
                             onValueChange = { onEvent(AccountAdminUiEvent.OnNewPhoneChanged(it)) },
-                            label = { Text("Teléfono nuevo") },
+                            label = { Text(stringResource(R.string.acc_new_phone_label)) },
                             singleLine = true,
                             enabled = !uiState.isPhoneValidating,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = if (hasPass) ImeAction.Next else ImeAction.Done),
@@ -424,7 +441,7 @@ fun AccountAdminScreen(
                             ),
                             value = uiState.phoneCurrentPasswordInput,
                             onValueChange = { onEvent(AccountAdminUiEvent.OnPhoneCurrentPasswordChanged(it)) },
-                            label = { Text("Contraseña actual") },
+                            label = { Text(stringResource(R.string.acc_current_password)) },
                             singleLine = true,
                             enabled = !uiState.isPhoneValidating,
                             visualTransformation = if (isPhoneCurrentPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -432,7 +449,7 @@ fun AccountAdminScreen(
                                 IconButton(onClick = { isPhoneCurrentPasswordVisible = !isPhoneCurrentPasswordVisible }) {
                                     Icon(
                                         imageVector = if (isPhoneCurrentPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                        contentDescription = "Mostrar u ocultar contraseña"
+                                        contentDescription = stringResource(R.string.acc_toggle_password_cd)
                                     )
                                 }
                             },
@@ -511,7 +528,7 @@ fun AccountAdminScreen(
                                         handleValidateAndSendSms(token)
                                     }
                                 }.onFailure { exception ->
-                                    Toast.makeText(context, exception.message ?: "Error al verificar con Google", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, exception.message ?: context.getString(R.string.acc_google_verify_error), Toast.LENGTH_LONG).show()
                                 }
                             }
                         }
@@ -525,7 +542,7 @@ fun AccountAdminScreen(
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text(if (hasPass) "Continuar" else "Confirmar con Google y continuar")
+                        Text(if (hasPass) stringResource(R.string.create_listing_continue) else stringResource(R.string.acc_google_confirm_continue))
                     }
                 }
             },
@@ -534,7 +551,7 @@ fun AccountAdminScreen(
                     onClick = { onEvent(AccountAdminUiEvent.OnPhoneFlowDismissed) },
                     enabled = !uiState.isPhoneValidating && !isSendingSms
                 ) {
-                    Text("Cancelar")
+                    Text(stringResource(R.string.common_cancel))
                 }
             }
         )
@@ -551,7 +568,7 @@ fun AccountAdminScreen(
             onDismissRequest = {
                 if (!uiState.isPhoneSaving) onEvent(AccountAdminUiEvent.OnPhoneFlowDismissed)
             },
-            title = { DialogTitle("Verificación por SMS") },
+            title = { DialogTitle(stringResource(R.string.acc_sms_title)) },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -559,7 +576,7 @@ fun AccountAdminScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "Escribe el código de 6 dígitos que enviamos por SMS a $targetPhone",
+                        text = stringResource(R.string.acc_sms_body_format, targetPhone),
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -615,7 +632,7 @@ fun AccountAdminScreen(
                                     val tokenFirebase = TelefonoFirebase.obtenerToken(credencial)
                                     onEvent(AccountAdminUiEvent.OnConfirmPhoneSmsSubmitted(tokenFirebase))
                                 } catch (e: Exception) {
-                                    smsLocalError = e.message ?: "El código de SMS es incorrecto"
+                                    smsLocalError = e.message ?: context.getString(R.string.acc_sms_code_wrong)
                                 }
                             }
                         }
@@ -629,7 +646,7 @@ fun AccountAdminScreen(
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("Verificar")
+                        Text(stringResource(R.string.common_verify))
                     }
                 }
             },
@@ -638,7 +655,7 @@ fun AccountAdminScreen(
                     onClick = { onEvent(AccountAdminUiEvent.OnPhoneFlowDismissed) },
                     enabled = !uiState.isPhoneSaving
                 ) {
-                    Text("Cancelar")
+                    Text(stringResource(R.string.common_cancel))
                 }
             }
         )
@@ -654,14 +671,14 @@ fun AccountAdminScreen(
             onDismissRequest = {
                 if (!uiState.isEmailCodeSending) onEvent(AccountAdminUiEvent.OnEmailFlowDismissed)
             },
-            title = { DialogTitle("Cambiar correo electrónico") },
+            title = { DialogTitle(stringResource(R.string.acc_change_email_title)) },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = "Correo actual: ${uiState.userData?.email.orEmpty()}",
+                        text = stringResource(R.string.acc_current_email_format, uiState.userData?.email.orEmpty()),
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -673,7 +690,7 @@ fun AccountAdminScreen(
                         ),
                         value = uiState.newEmailInput,
                         onValueChange = { onEvent(AccountAdminUiEvent.OnNewEmailChanged(it)) },
-                        label = { Text("Correo nuevo") },
+                        label = { Text(stringResource(R.string.acc_new_email_label)) },
                         singleLine = true,
                         enabled = !uiState.isEmailCodeSending,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = if (hasPass) ImeAction.Next else ImeAction.Done),
@@ -696,7 +713,7 @@ fun AccountAdminScreen(
                             ),
                             value = uiState.emailCurrentPasswordInput,
                             onValueChange = { onEvent(AccountAdminUiEvent.OnEmailCurrentPasswordChanged(it)) },
-                            label = { Text("Contraseña actual") },
+                            label = { Text(stringResource(R.string.acc_current_password)) },
                             singleLine = true,
                             enabled = !uiState.isEmailCodeSending,
                             visualTransformation = if (isEmailCurrentPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -704,7 +721,7 @@ fun AccountAdminScreen(
                                 IconButton(onClick = { isEmailCurrentPasswordVisible = !isEmailCurrentPasswordVisible }) {
                                     Icon(
                                         imageVector = if (isEmailCurrentPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                        contentDescription = "Mostrar u ocultar contraseña"
+                                        contentDescription = stringResource(R.string.acc_toggle_password_cd)
                                     )
                                 }
                             },
@@ -743,7 +760,7 @@ fun AccountAdminScreen(
                                         onEvent(AccountAdminUiEvent.OnRequestEmailCodeSubmitted(token))
                                     }
                                 }.onFailure { exception ->
-                                    Toast.makeText(context, exception.message ?: "Error al verificar con Google", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, exception.message ?: context.getString(R.string.acc_google_verify_error), Toast.LENGTH_LONG).show()
                                 }
                             }
                         }
@@ -757,7 +774,7 @@ fun AccountAdminScreen(
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text(if (hasPass) "Enviar código" else "Confirmar con Google y enviar código")
+                        Text(if (hasPass) stringResource(R.string.common_send_code) else stringResource(R.string.acc_google_confirm_send_code))
                     }
                 }
             },
@@ -766,7 +783,7 @@ fun AccountAdminScreen(
                     onClick = { onEvent(AccountAdminUiEvent.OnEmailFlowDismissed) },
                     enabled = !uiState.isEmailCodeSending
                 ) {
-                    Text("Cancelar")
+                    Text(stringResource(R.string.common_cancel))
                 }
             }
         )
@@ -782,7 +799,7 @@ fun AccountAdminScreen(
             onDismissRequest = {
                 if (!uiState.isEmailConfirming) onEvent(AccountAdminUiEvent.OnEmailFlowDismissed)
             },
-            title = { DialogTitle("Verifica tu nuevo correo") },
+            title = { DialogTitle(stringResource(R.string.acc_verify_new_email_title)) },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -790,7 +807,7 @@ fun AccountAdminScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "Escribe el código que enviamos a ${uiState.newEmailInput.trim()}",
+                        text = stringResource(R.string.acc_code_sent_to_format, uiState.newEmailInput.trim()),
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -837,7 +854,7 @@ fun AccountAdminScreen(
                             onClick = { onEvent(AccountAdminUiEvent.OnReturnToNewEmailStepRequested) },
                             enabled = !uiState.isEmailConfirming
                         ) {
-                            Text("Cambiar correo")
+                            Text(stringResource(R.string.common_change_email))
                         }
 
                         TextButton(
@@ -845,9 +862,9 @@ fun AccountAdminScreen(
                             enabled = uiState.canResendEmailCode && !uiState.isEmailConfirming
                         ) {
                             if (uiState.canResendEmailCode) {
-                                Text("Reenviar código")
+                                Text(stringResource(R.string.signup_resend_code))
                             } else {
-                                Text("Reenviar en ${uiState.emailResendCountdown}s")
+                                Text(stringResource(R.string.acc_resend_in_format, uiState.emailResendCountdown))
                             }
                         }
                     }
@@ -865,7 +882,7 @@ fun AccountAdminScreen(
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("Confirmar")
+                        Text(stringResource(R.string.manage_listing_confirm))
                     }
                 }
             },
@@ -874,7 +891,7 @@ fun AccountAdminScreen(
                     onClick = { onEvent(AccountAdminUiEvent.OnEmailFlowDismissed) },
                     enabled = !uiState.isEmailConfirming
                 ) {
-                    Text("Cancelar")
+                    Text(stringResource(R.string.common_cancel))
                 }
             }
         )
@@ -891,16 +908,16 @@ fun AccountAdminScreen(
             },
             title = {
                 DialogTitle(
-                    text = if (hasPass) "¿Quieres cambiar tu contraseña?" else "¿Quieres crear una contraseña?"
+                    text = if (hasPass) stringResource(R.string.acc_change_password_question) else stringResource(R.string.acc_create_password_question)
                 )
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         text = if (hasPass) {
-                            "Te enviaremos un código a tu correo para confirmar que eres tú."
+                            stringResource(R.string.acc_password_code_info)
                         } else {
-                            "Tu cuenta entra con Google. Si creas una contraseña, también podrás entrar con tu correo y contraseña; Google seguirá funcionando. Te enviaremos un código a tu correo."
+                            stringResource(R.string.acc_password_google_info)
                         }
                     )
                     if (uiState.otpErrorMessage != null) {
@@ -924,7 +941,7 @@ fun AccountAdminScreen(
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("Enviar código")
+                        Text(stringResource(R.string.common_send_code))
                     }
                 }
             },
@@ -933,7 +950,7 @@ fun AccountAdminScreen(
                     onClick = { onEvent(AccountAdminUiEvent.OnPasswordFlowDismissed) },
                     enabled = !uiState.isOtpLoading
                 ) {
-                    Text("Cancelar")
+                    Text(stringResource(R.string.common_cancel))
                 }
             }
         )
@@ -949,7 +966,7 @@ fun AccountAdminScreen(
             onDismissRequest = {
                 if (!uiState.isOtpLoading) onEvent(AccountAdminUiEvent.OnPasswordFlowDismissed)
             },
-            title = { DialogTitle("Verifica tu correo") },
+            title = { DialogTitle(stringResource(R.string.acc_verify_email_title)) },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -957,7 +974,7 @@ fun AccountAdminScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "Escribe el código que enviamos a ${uiState.maskedEmail.ifBlank { uiState.userData?.email.orEmpty() }}",
+                        text = stringResource(R.string.acc_code_sent_to_format, uiState.maskedEmail.ifBlank { uiState.userData?.email.orEmpty() }),
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1000,9 +1017,9 @@ fun AccountAdminScreen(
                         enabled = uiState.canResendCode && !uiState.isOtpLoading
                     ) {
                         if (uiState.canResendCode) {
-                            Text("Reenviar código")
+                            Text(stringResource(R.string.signup_resend_code))
                         } else {
-                            Text("Reenviar código en ${uiState.resendCountdown}s")
+                            Text(stringResource(R.string.acc_resend_code_in_format, uiState.resendCountdown))
                         }
                     }
                 }
@@ -1019,7 +1036,7 @@ fun AccountAdminScreen(
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("Verificar")
+                        Text(stringResource(R.string.common_verify))
                     }
                 }
             },
@@ -1028,7 +1045,7 @@ fun AccountAdminScreen(
                     onClick = { onEvent(AccountAdminUiEvent.OnPasswordFlowDismissed) },
                     enabled = !uiState.isOtpLoading
                 ) {
-                    Text("Cancelar")
+                    Text(stringResource(R.string.common_cancel))
                 }
             }
         )
@@ -1044,7 +1061,7 @@ fun AccountAdminScreen(
             },
             title = {
                 DialogTitle(
-                    text = if (hasPass) "Nueva contraseña" else "Crear contraseña"
+                    text = if (hasPass) stringResource(R.string.acc_new_password) else stringResource(R.string.acc_create_password)
                 )
             },
             text = {
@@ -1060,7 +1077,7 @@ fun AccountAdminScreen(
                             ),
                             value = uiState.currentPasswordInput,
                             onValueChange = { onEvent(AccountAdminUiEvent.OnCurrentPasswordChanged(it)) },
-                            label = { Text("Contraseña actual") },
+                            label = { Text(stringResource(R.string.acc_current_password)) },
                             singleLine = true,
                             enabled = !uiState.isPasswordSaving,
                             visualTransformation = if (isCurrentPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -1068,7 +1085,7 @@ fun AccountAdminScreen(
                                 IconButton(onClick = { isCurrentPasswordVisible = !isCurrentPasswordVisible }) {
                                     Icon(
                                         imageVector = if (isCurrentPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                        contentDescription = "Mostrar u ocultar contraseña"
+                                        contentDescription = stringResource(R.string.acc_toggle_password_cd)
                                     )
                                 }
                             },
@@ -1092,7 +1109,7 @@ fun AccountAdminScreen(
                         ),
                         value = uiState.newPasswordInput,
                         onValueChange = { onEvent(AccountAdminUiEvent.OnNewPasswordChanged(it)) },
-                        label = { Text("Nueva contraseña") },
+                        label = { Text(stringResource(R.string.acc_new_password)) },
                         singleLine = true,
                         enabled = !uiState.isPasswordSaving,
                         visualTransformation = if (isNewPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -1100,7 +1117,7 @@ fun AccountAdminScreen(
                             IconButton(onClick = { isNewPasswordVisible = !isNewPasswordVisible }) {
                                 Icon(
                                     imageVector = if (isNewPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                    contentDescription = "Mostrar u ocultar contraseña"
+                                    contentDescription = stringResource(R.string.acc_toggle_password_cd)
                                 )
                             }
                         },
@@ -1120,7 +1137,7 @@ fun AccountAdminScreen(
                         ),
                         value = uiState.confirmPasswordInput,
                         onValueChange = { onEvent(AccountAdminUiEvent.OnConfirmPasswordChanged(it)) },
-                        label = { Text("Confirmar nueva contraseña") },
+                        label = { Text(stringResource(R.string.acc_confirm_new_password)) },
                         singleLine = true,
                         enabled = !uiState.isPasswordSaving,
                         visualTransformation = if (isConfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -1128,7 +1145,7 @@ fun AccountAdminScreen(
                             IconButton(onClick = { isConfirmPasswordVisible = !isConfirmPasswordVisible }) {
                                 Icon(
                                     imageVector = if (isConfirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                    contentDescription = "Mostrar u ocultar contraseña"
+                                    contentDescription = stringResource(R.string.acc_toggle_password_cd)
                                 )
                             }
                         },
@@ -1157,7 +1174,7 @@ fun AccountAdminScreen(
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("Guardar")
+                        Text(stringResource(R.string.edit_profile_save))
                     }
                 }
             },
@@ -1166,7 +1183,7 @@ fun AccountAdminScreen(
                     onClick = { onEvent(AccountAdminUiEvent.OnPasswordFlowDismissed) },
                     enabled = !uiState.isPasswordSaving
                 ) {
-                    Text("Cancelar")
+                    Text(stringResource(R.string.common_cancel))
                 }
             }
         )
@@ -1204,7 +1221,7 @@ fun AccountAdminScreen(
                             ),
                             value = uiState.deactivatePasswordInput,
                             onValueChange = { onEvent(AccountAdminUiEvent.OnDeactivatePasswordChanged(it)) },
-                            label = { Text("Contraseña actual") },
+                            label = { Text(stringResource(R.string.acc_current_password)) },
                             singleLine = true,
                             enabled = !uiState.isDeactivating,
                             visualTransformation = if (isCurrentPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -1212,7 +1229,7 @@ fun AccountAdminScreen(
                                 IconButton(onClick = { isCurrentPasswordVisible = !isCurrentPasswordVisible }) {
                                     Icon(
                                         imageVector = if (isCurrentPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                        contentDescription = "Mostrar u ocultar contraseña"
+                                        contentDescription = stringResource(R.string.acc_toggle_password_cd)
                                     )
                                 }
                             },
@@ -1247,7 +1264,7 @@ fun AccountAdminScreen(
                                         if (token != null) onEvent(AccountAdminUiEvent.OnDeactivateConfirmed(token))
                                     }
                                     .onFailure { e ->
-                                        Toast.makeText(context, e.message ?: "Error al verificar con Google", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(context, e.message ?: context.getString(R.string.acc_google_verify_error), Toast.LENGTH_LONG).show()
                                     }
                             }
                         }
@@ -1257,7 +1274,7 @@ fun AccountAdminScreen(
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
                     } else {
                         Text(
-                            text = if (hasPassCuenta) stringResource(id = R.string.confirm_deactivate) else "Confirmar con Google",
+                            text = if (hasPassCuenta) stringResource(id = R.string.confirm_deactivate) else stringResource(R.string.acc_confirm_google),
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -1302,7 +1319,7 @@ fun AccountAdminScreen(
                             ),
                             value = uiState.deletePasswordInput,
                             onValueChange = { onEvent(AccountAdminUiEvent.OnDeletePasswordChanged(it)) },
-                            label = { Text("Contraseña actual") },
+                            label = { Text(stringResource(R.string.acc_current_password)) },
                             singleLine = true,
                             enabled = !uiState.isDeleting,
                             visualTransformation = if (isDeletePasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -1310,7 +1327,7 @@ fun AccountAdminScreen(
                                 IconButton(onClick = { isDeletePasswordVisible = !isDeletePasswordVisible }) {
                                     Icon(
                                         imageVector = if (isDeletePasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                        contentDescription = "Mostrar u ocultar contraseña"
+                                        contentDescription = stringResource(R.string.acc_toggle_password_cd)
                                     )
                                 }
                             },
@@ -1358,7 +1375,7 @@ fun AccountAdminScreen(
                                         if (token != null) onEvent(AccountAdminUiEvent.OnDeleteConfirmed(token))
                                     }
                                     .onFailure { e ->
-                                        Toast.makeText(context, e.message ?: "Error al verificar con Google", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(context, e.message ?: context.getString(R.string.acc_google_verify_error), Toast.LENGTH_LONG).show()
                                     }
                             }
                         }
@@ -1368,7 +1385,7 @@ fun AccountAdminScreen(
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
                     } else {
                         Text(
-                            text = if (hasPassCuenta) stringResource(id = R.string.confirm_delete) else "Confirmar con Google",
+                            text = if (hasPassCuenta) stringResource(id = R.string.confirm_delete) else stringResource(R.string.acc_confirm_google),
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -1393,11 +1410,14 @@ fun AccountAdminScreen(
                 if (!uiState.isCancellingPlan) onEvent(AccountAdminUiEvent.OnCancelPlanDismissed)
             },
             icon = { DialogIcon(Icons.Outlined.Cancel, dangerColor) },
-            title = { DialogTitle(text = "¿Cancelar suscripción?", color = dangerColor) },
+            title = { DialogTitle(text = stringResource(R.string.cancel_subscription_dialog_title), color = dangerColor) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        text = "Tus anuncios se ocultarán, pero no se borrarán. Podrás contratar otro plan cuando quieras.",
+                        // El plan sigue vigente hasta la fecha pagada; después se ocultan los anuncios
+                        text = uiState.userData?.planVence
+                            ?.let { stringResource(R.string.cancel_subscription_dialog_body_date, PlanDates.formatear(it, LocalConfiguration.current.locales[0])) }
+                            ?: stringResource(R.string.cancel_subscription_dialog_body),
                         fontSize = 14.sp,
                         lineHeight = 20.sp,
                         textAlign = textoCentrado,
@@ -1424,7 +1444,7 @@ fun AccountAdminScreen(
                     if (uiState.isCancellingPlan) {
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
                     } else {
-                        Text(text = "Sí, cancelar plan", fontWeight = FontWeight.SemiBold)
+                        Text(text = stringResource(R.string.acc_cancel_plan_confirm), fontWeight = FontWeight.SemiBold)
                     }
                 }
             },
@@ -1434,7 +1454,7 @@ fun AccountAdminScreen(
                     enabled = !uiState.isCancellingPlan,
                     onClick = { onEvent(AccountAdminUiEvent.OnCancelPlanDismissed) }
                 ) {
-                    Text(text = "Volver")
+                    Text(text = stringResource(R.string.forgot_back))
                 }
             }
         )

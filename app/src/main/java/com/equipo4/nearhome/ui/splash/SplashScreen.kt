@@ -31,6 +31,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.ui.res.stringResource
+import com.equipo4.nearhome.R
 
 /**
  * Splash con la animación original (casa+pin con "pop" y luego el trazo dibujándose de
@@ -81,7 +83,7 @@ fun SplashScreen(onFinished: (isLoggedIn: Boolean) -> Unit) {
         Box(modifier = Modifier.width(220.dp).aspectRatio(768f / 862f)) {
             Image(
                 painter = baseLogo,
-                contentDescription = "NearHouse Logo",
+                contentDescription = stringResource(R.string.logo_cd),
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {

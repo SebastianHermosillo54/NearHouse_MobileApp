@@ -29,6 +29,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import com.equipo4.nearhome.util.AppStrings
 
 class EditProfileViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -165,7 +166,7 @@ class EditProfileViewModel(application: Application) : AndroidViewModel(applicat
 
             fun fallar(msg: String?) {
                 _uiState.update {
-                    it.copy(isSaving = false, saveError = msg ?: "No se pudo guardar. Inténtalo de nuevo.")
+                    it.copy(isSaving = false, saveError = msg ?: AppStrings.get(R.string.edit_profile_save_error))
                 }
             }
 
@@ -198,7 +199,7 @@ class EditProfileViewModel(application: Application) : AndroidViewModel(applicat
                     } else {
                         val jpeg = withContext(Dispatchers.IO) { PhotoProcessor.comprimirAJpeg(app, uri) }
                         if (jpeg == null) {
-                            fallar("No se pudo leer la foto elegida")
+                            fallar(AppStrings.get(R.string.edit_profile_photo_read_error))
                             return@launch
                         }
                         authApi.subirFoto(
@@ -221,9 +222,9 @@ class EditProfileViewModel(application: Application) : AndroidViewModel(applicat
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {
-                fallar("No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo de nuevo")
+                fallar(AppStrings.get(R.string.network_error_connection))
             } catch (e: Exception) {
-                fallar("Ocurrió un error inesperado. Inténtalo de nuevo.")
+                fallar(AppStrings.get(R.string.error_unexpected_retry))
             }
         }
     }

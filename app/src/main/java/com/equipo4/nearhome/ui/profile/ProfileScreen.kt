@@ -45,6 +45,11 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.ui.platform.LocalContext
+import android.app.Activity
+import android.content.Intent
+import android.net.Uri
+import com.equipo4.nearhome.AppRoutes
+import com.equipo4.nearhome.MainActivity
 
 private enum class SettingSheetType { LANGUAGE, DARK_MODE }
 
@@ -63,6 +68,7 @@ fun ProfileScreen(
     onBottomTabSelected: (Int) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.sessionExpired.collect { onSessionExpired() }
@@ -72,7 +78,13 @@ fun ProfileScreen(
         reselectTrigger = reselectTrigger,
         uiState = uiState,
         onRecargar = viewModel::recargar,
-        onLanguageSelected = viewModel::onLanguageSelected,
+        onLanguageSelected = { idioma ->
+            val cambio = idioma != uiState.language
+            viewModel.onLanguageSelected(idioma)
+            // Se vuelve a abrir la app en Perfil: así TODO (también lo que ya estaba cargado
+            // en otras pantallas) sale en el idioma nuevo
+            if (cambio) (context as? Activity)?.let { reiniciarEnPerfil(it) }
+        },
         onDarkModeSelected = viewModel::onDarkModeSelected,
         onMyListingsClick = onMyListingsClick,
         onAccountClick = onAccountClick,
@@ -494,3 +506,14 @@ private fun Modifier.noRippleClickable(onClick: () -> Unit): Modifier =
         indication = null,
         onClick = onClick
     )
+
+/** Cierra y vuelve a abrir la app directo en Perfil, sin animación (para aplicar el idioma en todas las pantallas). */
+private fun reiniciarEnPerfil(activity: Activity) {
+    val intent = Intent(activity, MainActivity::class.java)
+        .setData(Uri.parse("nearhouse://${AppRoutes.PROFILE}"))
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+    activity.startActivity(intent)
+    activity.finish()
+    @Suppress("DEPRECATION")
+    activity.overridePendingTransition(0, 0)
+}

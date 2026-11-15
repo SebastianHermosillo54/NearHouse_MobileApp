@@ -19,6 +19,7 @@ import com.equipo4.nearhome.network.VerificarCodigoContrasenaRequest
 import com.equipo4.nearhome.ui.profile.UserRole
 import com.equipo4.nearhome.ui.subscription.PlanDates
 import com.equipo4.nearhome.util.PasswordValidator
+import com.equipo4.nearhome.util.AppStrings
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +29,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.IOException
+import com.equipo4.nearhome.data.remote.codigoApi
 
 class AccountAdminViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -53,18 +55,15 @@ class AccountAdminViewModel(application: Application) : AndroidViewModel(applica
     }
 
     private fun UsuarioMeDto.toAccountData(): UserAccountData {
-        val res = getApplication<Application>().resources
-        val locale = res.configuration.locales[0]
         val p = plan
-        val vigente = p?.vigente == true
         return UserAccountData(
             email = correo,
             phone = telefono,
             role = UserRole.fromDb(rol),
-            planName = p?.let { res.getString(R.string.plan_full_name_format, it.nombre) },
-            planStatus = p?.let { res.getString(if (vigente) R.string.plan_status_active else R.string.plan_status_expired) },
-            planExpired = p != null && !vigente,
-            renewalDate = p?.let { PlanDates.formatear(it.fechaVencimiento, locale) },
+            planNombre = p?.nombre,
+            planVigente = p?.vigente == true,
+            planCancelado = p?.cancelado == true,
+            planVence = p?.fechaVencimiento,
             isGoogleUser = !tieneContrasena,
             tieneContrasena = tieneContrasena
         )
@@ -303,20 +302,20 @@ class AccountAdminViewModel(application: Application) : AndroidViewModel(applica
                     onSuccessValidated(fullPhone)
                 } else {
                     val rawError = response.errorBody()?.string()
-                    val errorMsg = parseErrorMessage(rawError, "Error al validar el teléfono")
+                    val errorMsg = parseErrorMessage(rawError, AppStrings.get(R.string.acc_err_validate_phone))
                     when (response.code()) {
                         403 -> {
                             if (hasPass) {
-                                _uiState.update { it.copy(isPhoneValidating = false, phoneCurrentPasswordError = "La contraseña actual no es correcta") }
+                                _uiState.update { it.copy(isPhoneValidating = false, phoneCurrentPasswordError = AppStrings.get(R.string.acc_err_current_password)) }
                             } else {
-                                _uiState.update { it.copy(isPhoneValidating = false, phoneGeneralError = "Esa cuenta de Google no es la de tu cuenta de NearHouse. Elige la correcta.") }
+                                _uiState.update { it.copy(isPhoneValidating = false, phoneGeneralError = AppStrings.get(R.string.acc_err_wrong_google)) }
                             }
                         }
                         409 -> {
-                            _uiState.update { it.copy(isPhoneValidating = false, newPhoneError = "Ese teléfono ya está registrado") }
+                            _uiState.update { it.copy(isPhoneValidating = false, newPhoneError = AppStrings.get(R.string.acc_err_phone_taken)) }
                         }
                         429 -> {
-                            _uiState.update { it.copy(isPhoneValidating = false, phoneGeneralError = "Has realizado demasiados intentos para cambiar tu teléfono. Intenta de nuevo en un rato.") }
+                            _uiState.update { it.copy(isPhoneValidating = false, phoneGeneralError = AppStrings.get(R.string.acc_err_phone_too_many)) }
                         }
                         else -> {
                             _uiState.update { it.copy(isPhoneValidating = false, phoneGeneralError = errorMsg) }
@@ -325,11 +324,11 @@ class AccountAdminViewModel(application: Application) : AndroidViewModel(applica
                 }
             } catch (_: IOException) {
                 _uiState.update {
-                    it.copy(isPhoneValidating = false, phoneGeneralError = "No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo de nuevo")
+                    it.copy(isPhoneValidating = false, phoneGeneralError = AppStrings.get(R.string.network_error_connection))
                 }
             } catch (_: Exception) {
                 _uiState.update {
-                    it.copy(isPhoneValidating = false, phoneGeneralError = "Ocurrió un error inesperado. Inténtalo de nuevo")
+                    it.copy(isPhoneValidating = false, phoneGeneralError = AppStrings.get(R.string.error_unexpected_retry))
                 }
             }
         }
@@ -345,16 +344,16 @@ class AccountAdminViewModel(application: Application) : AndroidViewModel(applica
                 if (response.isSuccessful) {
                     CurrentUserStore.refresh(authApi)
                     limpiarEstadoMemoriaTelefono()
-                    _uiState.update { it.copy(snackbarSuccessMessage = "Teléfono actualizado") }
+                    _uiState.update { it.copy(snackbarSuccessMessage = AppStrings.get(R.string.acc_phone_updated)) }
                 } else {
                     val rawError = response.errorBody()?.string()
-                    val errorMsg = parseErrorMessage(rawError, "El tiempo para cambiar el teléfono expiró, vuelve a intentarlo")
+                    val errorMsg = parseErrorMessage(rawError, AppStrings.get(R.string.acc_err_phone_expired))
                     if (response.code() == 409) {
                         _uiState.update {
                             it.copy(
                                 isPhoneSaving = false,
                                 phoneStep = PhoneFlowStep.NEW_PHONE,
-                                phoneGeneralError = "El tiempo para cambiar el teléfono expiró, vuelve a intentarlo"
+                                phoneGeneralError = AppStrings.get(R.string.acc_err_phone_expired)
                             )
                         }
                     } else {
@@ -363,11 +362,11 @@ class AccountAdminViewModel(application: Application) : AndroidViewModel(applica
                 }
             } catch (_: IOException) {
                 _uiState.update {
-                    it.copy(isPhoneSaving = false, phoneSaveError = "No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo de nuevo")
+                    it.copy(isPhoneSaving = false, phoneSaveError = AppStrings.get(R.string.network_error_connection))
                 }
             } catch (_: Exception) {
                 _uiState.update {
-                    it.copy(isPhoneSaving = false, phoneSaveError = "Ocurrió un error inesperado. Inténtalo de nuevo")
+                    it.copy(isPhoneSaving = false, phoneSaveError = AppStrings.get(R.string.error_unexpected_retry))
                 }
             }
         }
@@ -425,21 +424,21 @@ class AccountAdminViewModel(application: Application) : AndroidViewModel(applica
                     startEmailResendTimer()
                 } else {
                     val rawError = response.errorBody()?.string()
-                    val errorMsg = parseErrorMessage(rawError, "Error al solicitar código")
+                    val errorMsg = parseErrorMessage(rawError, AppStrings.get(R.string.acc_err_request_code))
                     when (response.code()) {
                         403 -> {
                             if (hasPass) {
-                                _uiState.update { it.copy(isEmailCodeSending = false, emailCurrentPasswordError = "La contraseña actual no es correcta") }
+                                _uiState.update { it.copy(isEmailCodeSending = false, emailCurrentPasswordError = AppStrings.get(R.string.acc_err_current_password)) }
                             } else {
-                                _uiState.update { it.copy(isEmailCodeSending = false, emailGeneralError = "Esa cuenta de Google no es la de tu cuenta de NearHouse. Elige la correcta.") }
+                                _uiState.update { it.copy(isEmailCodeSending = false, emailGeneralError = AppStrings.get(R.string.acc_err_wrong_google)) }
                             }
                         }
                         409 -> {
-                            _uiState.update { it.copy(isEmailCodeSending = false, newEmailError = "Ese correo ya está registrado") }
+                            _uiState.update { it.copy(isEmailCodeSending = false, newEmailError = AppStrings.get(R.string.acc_err_email_taken)) }
                         }
                         400 -> {
                             if (errorMsg.contains("Confirma con Google", ignoreCase = true)) {
-                                _uiState.update { it.copy(isEmailCodeSending = false, emailStep = EmailFlowStep.NEW_EMAIL, emailGeneralError = "Confirma con Google otra vez") }
+                                _uiState.update { it.copy(isEmailCodeSending = false, emailStep = EmailFlowStep.NEW_EMAIL, emailGeneralError = AppStrings.get(R.string.acc_err_confirm_google_again)) }
                             } else {
                                 _uiState.update { it.copy(isEmailCodeSending = false, emailGeneralError = errorMsg) }
                             }
@@ -451,11 +450,11 @@ class AccountAdminViewModel(application: Application) : AndroidViewModel(applica
                 }
             } catch (_: IOException) {
                 _uiState.update {
-                    it.copy(isEmailCodeSending = false, emailGeneralError = "No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo de nuevo")
+                    it.copy(isEmailCodeSending = false, emailGeneralError = AppStrings.get(R.string.network_error_connection))
                 }
             } catch (_: Exception) {
                 _uiState.update {
-                    it.copy(isEmailCodeSending = false, emailGeneralError = "Ocurrió un error inesperado. Inténtalo de nuevo")
+                    it.copy(isEmailCodeSending = false, emailGeneralError = AppStrings.get(R.string.error_unexpected_retry))
                 }
             }
         }
@@ -477,16 +476,16 @@ class AccountAdminViewModel(application: Application) : AndroidViewModel(applica
                 if (response.isSuccessful) {
                     CurrentUserStore.refresh(authApi)
                     limpiarEstadoMemoriaCorreo()
-                    _uiState.update { it.copy(snackbarSuccessMessage = "Correo actualizado") }
+                    _uiState.update { it.copy(snackbarSuccessMessage = AppStrings.get(R.string.acc_email_updated)) }
                 } else {
                     val rawError = response.errorBody()?.string()
-                    val errorMsg = parseErrorMessage(rawError, "El código es incorrecto o ya venció")
+                    val errorMsg = parseErrorMessage(rawError, AppStrings.get(R.string.acc_err_code_wrong))
                     if (response.code() == 409) {
                         _uiState.update {
                             it.copy(
                                 isEmailConfirming = false,
                                 emailStep = EmailFlowStep.NEW_EMAIL,
-                                newEmailError = "Ese correo ya está registrado"
+                                newEmailError = AppStrings.get(R.string.acc_err_email_taken)
                             )
                         }
                     } else {
@@ -497,11 +496,11 @@ class AccountAdminViewModel(application: Application) : AndroidViewModel(applica
                 }
             } catch (_: IOException) {
                 _uiState.update {
-                    it.copy(isEmailConfirming = false, emailOtpErrorMessage = "No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo de nuevo")
+                    it.copy(isEmailConfirming = false, emailOtpErrorMessage = AppStrings.get(R.string.network_error_connection))
                 }
             } catch (_: Exception) {
                 _uiState.update {
-                    it.copy(isEmailConfirming = false, emailOtpErrorMessage = "Ocurrió un error inesperado. Inténtalo de nuevo")
+                    it.copy(isEmailConfirming = false, emailOtpErrorMessage = AppStrings.get(R.string.error_unexpected_retry))
                 }
             }
         }
@@ -559,16 +558,16 @@ class AccountAdminViewModel(application: Application) : AndroidViewModel(applica
                     startResendTimer()
                 } else {
                     val rawError = response.errorBody()?.string()
-                    val errorMsg = parseErrorMessage(rawError, "No se pudo enviar el correo")
+                    val errorMsg = parseErrorMessage(rawError, AppStrings.get(R.string.acc_err_send_email))
                     _uiState.update { it.copy(isOtpLoading = false, otpErrorMessage = errorMsg) }
                 }
             } catch (_: IOException) {
                 _uiState.update {
-                    it.copy(isOtpLoading = false, otpErrorMessage = "No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo de nuevo")
+                    it.copy(isOtpLoading = false, otpErrorMessage = AppStrings.get(R.string.network_error_connection))
                 }
             } catch (_: Exception) {
                 _uiState.update {
-                    it.copy(isOtpLoading = false, otpErrorMessage = "Ocurrió un error inesperado. Inténtalo de nuevo")
+                    it.copy(isOtpLoading = false, otpErrorMessage = AppStrings.get(R.string.error_unexpected_retry))
                 }
             }
         }
@@ -595,16 +594,16 @@ class AccountAdminViewModel(application: Application) : AndroidViewModel(applica
                     }
                 } else {
                     val rawError = response.errorBody()?.string()
-                    val errorMsg = parseErrorMessage(rawError, "El código es incorrecto o ya venció")
+                    val errorMsg = parseErrorMessage(rawError, AppStrings.get(R.string.acc_err_code_wrong))
                     _uiState.update { it.copy(isOtpLoading = false, otpErrorMessage = errorMsg) }
                 }
             } catch (_: IOException) {
                 _uiState.update {
-                    it.copy(isOtpLoading = false, otpErrorMessage = "No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo de nuevo")
+                    it.copy(isOtpLoading = false, otpErrorMessage = AppStrings.get(R.string.network_error_connection))
                 }
             } catch (_: Exception) {
                 _uiState.update {
-                    it.copy(isOtpLoading = false, otpErrorMessage = "Ocurrió un error inesperado. Inténtalo de nuevo")
+                    it.copy(isOtpLoading = false, otpErrorMessage = AppStrings.get(R.string.error_unexpected_retry))
                 }
             }
         }
@@ -636,7 +635,7 @@ class AccountAdminViewModel(application: Application) : AndroidViewModel(applica
                     sessionManager.saveToken(body.token)
                     CurrentUserStore.refresh(authApi)
 
-                    val successMsg = if (hasCurrentPassword) "Contraseña actualizada" else "Contraseña creada"
+                    val successMsg = if (hasCurrentPassword) AppStrings.get(R.string.acc_password_updated) else AppStrings.get(R.string.acc_password_created)
 
                     limpiarEstadoMemoriaContrasena()
                     _uiState.update {
@@ -644,15 +643,15 @@ class AccountAdminViewModel(application: Application) : AndroidViewModel(applica
                     }
                 } else {
                     val rawError = response.errorBody()?.string()
-                    val errorMsg = parseErrorMessage(rawError, "Error al guardar la contraseña")
+                    val errorMsg = parseErrorMessage(rawError, AppStrings.get(R.string.acc_err_save_password))
                     if (response.code() == 403) {
                         _uiState.update {
-                            it.copy(isPasswordSaving = false, currentPasswordError = "La contraseña actual no es correcta")
+                            it.copy(isPasswordSaving = false, currentPasswordError = AppStrings.get(R.string.acc_err_current_password))
                         }
                     } else if (response.code() == 409) {
                         limpiarEstadoMemoriaContrasena()
                         _uiState.update {
-                            it.copy(snackbarSuccessMessage = "El tiempo para cambiar tu contraseña terminó. Vuelve a empezar.")
+                            it.copy(snackbarSuccessMessage = AppStrings.get(R.string.acc_err_password_expired))
                         }
                     } else {
                         _uiState.update {
@@ -664,14 +663,14 @@ class AccountAdminViewModel(application: Application) : AndroidViewModel(applica
                 _uiState.update {
                     it.copy(
                         isPasswordSaving = false,
-                        passwordSaveError = "No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo de nuevo"
+                        passwordSaveError = AppStrings.get(R.string.network_error_connection)
                     )
                 }
             } catch (_: Exception) {
                 _uiState.update {
                     it.copy(
                         isPasswordSaving = false,
-                        passwordSaveError = "Ocurrió un error inesperado. Inténtalo de nuevo"
+                        passwordSaveError = AppStrings.get(R.string.error_unexpected_retry)
                     )
                 }
             }
@@ -735,7 +734,7 @@ class AccountAdminViewModel(application: Application) : AndroidViewModel(applica
                     }
                 } else {
                     val rawError = response.errorBody()?.string()
-                    val errorMsg = parseErrorMessage(rawError, "La contraseña actual es incorrecta")
+                    val errorMsg = parseErrorMessage(rawError, AppStrings.get(R.string.acc_err_current_password))
                     _uiState.update {
                         it.copy(isDeactivating = false, deactivateError = errorMsg)
                     }
@@ -744,14 +743,14 @@ class AccountAdminViewModel(application: Application) : AndroidViewModel(applica
                 _uiState.update {
                     it.copy(
                         isDeactivating = false,
-                        deactivateError = "No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo de nuevo"
+                        deactivateError = AppStrings.get(R.string.network_error_connection)
                     )
                 }
             } catch (_: Exception) {
                 _uiState.update {
                     it.copy(
                         isDeactivating = false,
-                        deactivateError = "Ocurrió un error inesperado. Inténtalo de nuevo"
+                        deactivateError = AppStrings.get(R.string.error_unexpected_retry)
                     )
                 }
             }
@@ -780,23 +779,23 @@ class AccountAdminViewModel(application: Application) : AndroidViewModel(applica
                             deleteInputText = "",
                             deletePasswordInput = "",
                             isDeletedSuccess = true,
-                            snackbarSuccessMessage = "Tu cuenta se eliminará el ${body.fechaEliminacionTexto}. Si inicias sesión antes, se cancela."
+                            snackbarSuccessMessage = AppStrings.get(R.string.acc_delete_scheduled_msg, PlanDates.formatear(body.fechaEliminacion, AppStrings.locale()))
                         )
                     }
                 } else {
-                    val errorMsg = parseErrorMessage(response.errorBody()?.string(), "No se pudo eliminar la cuenta")
+                    val errorMsg = parseErrorMessage(response.errorBody()?.string(), AppStrings.get(R.string.acc_err_delete_account))
                     _uiState.update { it.copy(isDeleting = false, deleteError = errorMsg) }
                 }
             } catch (_: IOException) {
                 _uiState.update {
                     it.copy(
                         isDeleting = false,
-                        deleteError = "No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo de nuevo"
+                        deleteError = AppStrings.get(R.string.network_error_connection)
                     )
                 }
             } catch (_: Exception) {
                 _uiState.update {
-                    it.copy(isDeleting = false, deleteError = "Ocurrió un error inesperado. Inténtalo de nuevo")
+                    it.copy(isDeleting = false, deleteError = AppStrings.get(R.string.error_unexpected_retry))
                 }
             }
         }
@@ -811,30 +810,37 @@ class AccountAdminViewModel(application: Application) : AndroidViewModel(applica
                 val response = authApi.cancelarPlan()
                 val body = response.body()
                 if (response.isSuccessful && body != null) {
+                    // El plan sigue vigente hasta su fecha: el usuario regresa con "cancelado" y esa fecha
                     sessionManager.saveToken(body.token)
-                    CurrentUserStore.clear()
-                    CurrentUserStore.refresh(authApi)
+                    sessionManager.saveUser(name = body.usuario.nombre, role = body.usuario.rol)
+                    CurrentUserStore.set(body.usuario)
+                    val hasta = body.usuario.plan?.fechaVencimiento?.let { PlanDates.formatear(it, AppStrings.locale()) }.orEmpty()
                     _uiState.update {
                         it.copy(
                             isCancellingPlan = false,
                             showCancelPlanDialog = false,
-                            snackbarSuccessMessage = "Plan cancelado. Tus anuncios ya no se ven."
+                            snackbarSuccessMessage = AppStrings.get(R.string.plan_cancel_success_body, hasta)
                         )
                     }
                 } else {
-                    val errorMsg = parseErrorMessage(response.errorBody()?.string(), "No se pudo cancelar el plan")
+                    val raw = response.errorBody()?.string()
+                    val errorMsg = when (codigoApi(raw)) {
+                        "SIN_PLAN_ACTIVO" -> AppStrings.get(R.string.plan_cancel_error_no_plan)
+                        "PLAN_YA_CANCELADO" -> AppStrings.get(R.string.plan_cancel_error_already)
+                        else -> parseErrorMessage(raw, AppStrings.get(R.string.acc_err_cancel_plan))
+                    }
                     _uiState.update { it.copy(isCancellingPlan = false, cancelPlanError = errorMsg) }
                 }
             } catch (_: IOException) {
                 _uiState.update {
                     it.copy(
                         isCancellingPlan = false,
-                        cancelPlanError = "No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo de nuevo"
+                        cancelPlanError = AppStrings.get(R.string.network_error_connection)
                     )
                 }
             } catch (_: Exception) {
                 _uiState.update {
-                    it.copy(isCancellingPlan = false, cancelPlanError = "Ocurrió un error inesperado. Inténtalo de nuevo")
+                    it.copy(isCancellingPlan = false, cancelPlanError = AppStrings.get(R.string.error_unexpected_retry))
                 }
             }
         }

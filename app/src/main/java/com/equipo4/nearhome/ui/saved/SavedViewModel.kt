@@ -86,11 +86,11 @@ class SavedViewModel(
                 _uiState.update {
                     it.copy(
                         lastUnsavedProperty = property,
-                        snackbarMessage = "Quitada de guardados"
+                        snackbarMessage = AppStrings.get(R.string.saved_removed)
                     )
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(snackbarMessage = "No se pudo guardar. Revisa tu conexión.") }
+                _uiState.update { it.copy(snackbarMessage = AppStrings.get(R.string.saved_error_save)) }
             }
         }
     }
@@ -103,7 +103,7 @@ class SavedViewModel(
                 repository.setSaved(propertyToRestore.id, true)
                 _uiState.update { it.copy(lastUnsavedProperty = null, snackbarMessage = null) }
             } catch (e: Exception) {
-                _uiState.update { it.copy(snackbarMessage = "No se pudo guardar. Revisa tu conexión.") }
+                _uiState.update { it.copy(snackbarMessage = AppStrings.get(R.string.saved_error_save)) }
             }
         }
     }

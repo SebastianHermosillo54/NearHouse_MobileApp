@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.equipo4.nearhome.R
+import com.equipo4.nearhome.util.AppStrings
 
 class HomeViewModel(
     private val repository: PropiedadRepository = Repositories.propiedades
@@ -130,7 +132,7 @@ class HomeViewModel(
             try {
                 repository.setSaved(propertyId, !current.isSaved)
             } catch (e: Exception) {
-                onError("No se pudo guardar. Revisa tu conexión.")
+                onError(AppStrings.get(R.string.saved_error_save))
             }
         }
     }

@@ -44,6 +44,7 @@ import com.equipo4.nearhome.ui.common.NearHomeDialog
 import com.equipo4.nearhome.ui.publicacion.detail.FullScreenPhotoViewer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.compose.ui.res.pluralStringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -228,8 +229,8 @@ fun ReportReasonScreen(
                     ) {
                         Text(
                             text = when {
-                                faltan > 0 -> "Escribe al menos $faltan palabras para poder enviar"
-                                else -> "Listo para enviar"
+                                faltan > 0 -> pluralStringResource(R.plurals.report_words_missing, faltan, faltan)
+                                else -> stringResource(R.string.appeal_ready)
                             },
                             fontSize = 11.sp,
                             color = if (faltan > 0) MaterialTheme.colorScheme.error

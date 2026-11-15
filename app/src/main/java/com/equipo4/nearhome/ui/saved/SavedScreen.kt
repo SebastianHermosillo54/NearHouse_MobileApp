@@ -66,12 +66,13 @@ fun SavedScreen(
         viewModel.onScreenResumed()
     }
 
+    val deshacerLabel = stringResource(R.string.common_undo)
     LaunchedEffect(uiState.snackbarMessage) {
         uiState.snackbarMessage?.let { msg ->
             val hasUndo = uiState.lastUnsavedProperty != null
             val result = snackbarHostState.showSnackbar(
                 message = msg,
-                actionLabel = if (hasUndo) "Deshacer" else null,
+                actionLabel = if (hasUndo) deshacerLabel else null,
                 duration = SnackbarDuration.Short
             )
             if (result == SnackbarResult.ActionPerformed) {

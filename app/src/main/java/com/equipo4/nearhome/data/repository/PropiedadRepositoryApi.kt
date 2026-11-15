@@ -24,6 +24,8 @@ import kotlinx.coroutines.launch
 import java.io.IOException
 import java.util.Collections
 import kotlin.coroutines.cancellation.CancellationException
+import com.equipo4.nearhome.R
+import com.equipo4.nearhome.util.AppStrings
 
 /** URL de una foto del anuncio. Es pública: Coil la carga sin sesión. */
 fun fotoPublicacionUrl(fotoId: Int): String = "${NetworkModule.BASE_URL}api/v1/fotos/$fotoId"
@@ -91,12 +93,12 @@ class PropiedadRepositoryApi(context: Context) : PropiedadRepository {
             val response = if (saved) api.guardar(id) else api.eliminarGuardado(id)
             if (!response.isSuccessful) {
                 savedIds.value = previousSaved
-                throw Exception("No se pudo guardar. Revisa tu conexión.")
+                throw Exception(AppStrings.get(R.string.saved_error_save))
             }
         } catch (e: Exception) {
             savedIds.value = previousSaved
             if (e is CancellationException) throw e
-            throw Exception("No se pudo guardar. Revisa tu conexión.")
+            throw Exception(AppStrings.get(R.string.saved_error_save))
         } finally {
             inFlightToggles.remove(propertyId)
         }

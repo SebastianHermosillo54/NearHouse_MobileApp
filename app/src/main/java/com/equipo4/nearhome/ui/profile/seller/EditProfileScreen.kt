@@ -40,6 +40,7 @@ import com.equipo4.nearhome.R
 import com.equipo4.nearhome.ui.common.EditProfileSkeleton
 import com.equipo4.nearhome.ui.common.NearHomeBottomBar
 import com.equipo4.nearhome.ui.profile.UserRole
+import androidx.compose.material3.MaterialTheme
 
 @Composable
 fun EditProfileScreen(
@@ -145,7 +146,7 @@ fun EditProfileScreen(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .clip(CircleShape)
-                                    .background(Color(0xFFE0F2FE)),
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (uiState.photoUri != null) {
@@ -159,7 +160,7 @@ fun EditProfileScreen(
                                     Icon(
                                         imageVector = Icons.Outlined.Person,
                                         contentDescription = null,
-                                        tint = Color(0xFF0284C7),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                         modifier = Modifier.size(56.dp)
                                     )
                                 }

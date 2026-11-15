@@ -48,7 +48,7 @@ fun NotificationsScreen(
                 actions = {
                     Box {
                         IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "Opciones")
+                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.common_options))
                         }
                         DropdownMenu(
                             expanded = showMenu,

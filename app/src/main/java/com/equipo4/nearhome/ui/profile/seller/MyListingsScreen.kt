@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.ui.platform.LocalConfiguration
+import com.equipo4.nearhome.ui.subscription.PlanDates
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -126,6 +128,23 @@ fun MyListingsScreen(
                         onEditProfileClick = onEditProfileClick,
                         onCreateListingClick = onCreateListingClick
                     )
+                }
+
+                // Canceló su plan: sus anuncios se ven hasta la fecha pagada y después se ocultan
+                val canceladoVence = uiState.planCanceladoVence
+                if (canceladoVence != null && uiState.listings.isNotEmpty()) {
+                    item {
+                        val locale = LocalConfiguration.current.locales[0]
+                        NoticeBanner(
+                            tone = NoticeTone.INFO,
+                            text = stringResource(
+                                R.string.my_listings_plan_cancelled_notice,
+                                PlanDates.formatear(canceladoVence, locale)
+                            ),
+                            icon = Icons.Filled.Info,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                        )
+                    }
                 }
 
                 // Comprador que antes fue vendedor: sus anuncios se ven, pero no están publicados

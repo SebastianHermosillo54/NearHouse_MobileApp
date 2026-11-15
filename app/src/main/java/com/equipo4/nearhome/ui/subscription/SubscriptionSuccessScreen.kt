@@ -26,6 +26,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.res.stringResource
+import com.equipo4.nearhome.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -79,7 +81,7 @@ fun SubscriptionSuccessScreen(
             Spacer(modifier = Modifier.height(40.dp))
 
             Text(
-                text = "¡Plan actualizado!",
+                text = stringResource(R.string.subscription_plan_updated),
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = cs.onSurface,
@@ -105,7 +107,7 @@ fun SubscriptionSuccessScreen(
                     .height(50.dp),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Continuar", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.create_listing_continue), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }

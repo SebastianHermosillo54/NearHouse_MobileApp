@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.equipo4.nearhome.R
 import com.equipo4.nearhome.domain.model.Country
+import androidx.compose.ui.platform.LocalConfiguration
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -161,7 +162,7 @@ fun CompleteProfileScreen(
                 isRequired = false,
                 value = uiState.secondLastName,
                 onValueChange = viewModel::onSecondLastNameChanged,
-                placeholder = "(opcional)",
+                placeholder = stringResource(R.string.edit_profile_optional_hint),
                 isError = isSecondLastNameCapitalInvalid,
                 errorMessage = if (isSecondLastNameCapitalInvalid) stringResource(R.string.complete_profile_second_lastname_error_capital) else null
             )
@@ -652,7 +653,9 @@ private fun CountrySelectionContent(
                     Text(text = country.flag, fontSize = 20.sp)
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = country.name,
+                        text = java.util.Locale("", country.isoCode)
+                            .getDisplayCountry(LocalConfiguration.current.locales[0])
+                            .ifBlank { country.name },
                         fontSize = 14.sp,
                         modifier = Modifier.weight(1f)
                     )

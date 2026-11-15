@@ -48,7 +48,7 @@ class DetailPublicacionViewModel(
                     repository.setSaved(pub.id, nuevoEstadoGuardado)
                 } catch (e: Exception) {
                     _uiState.value = DetailPublicacionUiState.Success(pub.copy(estaGuardado = pub.estaGuardado))
-                    onFailure("No se pudo guardar. Revisa tu conexión.")
+                    onFailure(AppStrings.get(R.string.saved_error_save))
                 }
             }
         }

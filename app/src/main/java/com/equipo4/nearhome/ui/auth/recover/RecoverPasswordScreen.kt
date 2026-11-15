@@ -17,6 +17,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.stringResource
+import com.equipo4.nearhome.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -51,9 +53,9 @@ fun RecoverPasswordScreen(
                 title = {
                     Text(
                         text = when (uiState.step) {
-                            RecoverStep.REQUEST_CODE -> "Recuperar contraseña"
-                            RecoverStep.VERIFY_CODE -> "Verifica tu correo"
-                            RecoverStep.NEW_PASSWORD -> "Nueva contraseña"
+                            RecoverStep.REQUEST_CODE -> stringResource(R.string.login_forgot_password_action)
+                            RecoverStep.VERIFY_CODE -> stringResource(R.string.acc_verify_email_title)
+                            RecoverStep.NEW_PASSWORD -> stringResource(R.string.acc_new_password)
                         },
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.SemiBold,
@@ -71,7 +73,7 @@ fun RecoverPasswordScreen(
                     }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Regresar"
+                            contentDescription = stringResource(R.string.common_back)
                         )
                     }
                 }
@@ -94,7 +96,7 @@ fun RecoverPasswordScreen(
                 // PASO 1: RECUPERAR CONTRASEÑA (SOLICITAR CÓDIGO)
                 RecoverStep.REQUEST_CODE -> {
                     Text(
-                        text = "Ingresa el correo electrónico asociado a tu cuenta para recibir un código de recuperación.",
+                        text = stringResource(R.string.recover_request_info),
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -102,7 +104,7 @@ fun RecoverPasswordScreen(
                     OutlinedTextField(
                         value = uiState.emailInput,
                         onValueChange = { viewModel.onEvent(RecoverPasswordUiEvent.OnEmailChanged(it)) },
-                        label = { Text("Correo electrónico") },
+                        label = { Text(stringResource(R.string.label_email)) },
                         singleLine = true,
                         enabled = !uiState.isSendingCode,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Done),
@@ -136,7 +138,7 @@ fun RecoverPasswordScreen(
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Text("Enviar código", fontSize = 16.sp)
+                            Text(stringResource(R.string.common_send_code), fontSize = 16.sp)
                         }
                     }
                 }
@@ -144,7 +146,7 @@ fun RecoverPasswordScreen(
                 // PASO 2: VERIFICA TU CORREO
                 RecoverStep.VERIFY_CODE -> {
                     Text(
-                        text = "Si el correo está registrado, te enviamos un código a ${uiState.emailInput.trim()}. Revisa también la carpeta de spam.",
+                        text = stringResource(R.string.recover_code_sent_format, uiState.emailInput.trim()),
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -201,7 +203,7 @@ fun RecoverPasswordScreen(
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Text("Verificar", fontSize = 16.sp)
+                            Text(stringResource(R.string.common_verify), fontSize = 16.sp)
                         }
                     }
 
@@ -214,7 +216,7 @@ fun RecoverPasswordScreen(
                             onClick = { viewModel.onEvent(RecoverPasswordUiEvent.OnReturnToEmailStepRequested) },
                             enabled = !uiState.isVerifyingCode
                         ) {
-                            Text("Cambiar correo")
+                            Text(stringResource(R.string.common_change_email))
                         }
 
                         TextButton(
@@ -222,9 +224,9 @@ fun RecoverPasswordScreen(
                             enabled = uiState.canResendCode && !uiState.isVerifyingCode
                         ) {
                             if (uiState.canResendCode) {
-                                Text("Reenviar código")
+                                Text(stringResource(R.string.signup_resend_code))
                             } else {
-                                Text("Reenviar en ${uiState.resendCountdown}s")
+                                Text(stringResource(R.string.acc_resend_in_format, uiState.resendCountdown))
                             }
                         }
                     }
@@ -233,7 +235,7 @@ fun RecoverPasswordScreen(
                 // PASO 3: NUEVA CONTRASEÑA
                 RecoverStep.NEW_PASSWORD -> {
                     Text(
-                        text = "Crea una nueva contraseña para tu cuenta.",
+                        text = stringResource(R.string.recover_new_password_info),
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -241,7 +243,7 @@ fun RecoverPasswordScreen(
                     OutlinedTextField(
                         value = uiState.newPasswordInput,
                         onValueChange = { viewModel.onEvent(RecoverPasswordUiEvent.OnNewPasswordChanged(it)) },
-                        label = { Text("Nueva contraseña") },
+                        label = { Text(stringResource(R.string.acc_new_password)) },
                         singleLine = true,
                         enabled = !uiState.isSavingPassword,
                         visualTransformation = if (isNewPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -249,7 +251,7 @@ fun RecoverPasswordScreen(
                             IconButton(onClick = { isNewPasswordVisible = !isNewPasswordVisible }) {
                                 Icon(
                                     imageVector = if (isNewPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                    contentDescription = "Mostrar u ocultar contraseña"
+                                    contentDescription = stringResource(R.string.acc_toggle_password_cd)
                                 )
                             }
                         },
@@ -262,7 +264,7 @@ fun RecoverPasswordScreen(
                     OutlinedTextField(
                         value = uiState.confirmPasswordInput,
                         onValueChange = { viewModel.onEvent(RecoverPasswordUiEvent.OnConfirmPasswordChanged(it)) },
-                        label = { Text("Confirmar nueva contraseña") },
+                        label = { Text(stringResource(R.string.acc_confirm_new_password)) },
                         singleLine = true,
                         enabled = !uiState.isSavingPassword,
                         visualTransformation = if (isConfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -270,7 +272,7 @@ fun RecoverPasswordScreen(
                             IconButton(onClick = { isConfirmPasswordVisible = !isConfirmPasswordVisible }) {
                                 Icon(
                                     imageVector = if (isConfirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                    contentDescription = "Mostrar u ocultar contraseña"
+                                    contentDescription = stringResource(R.string.acc_toggle_password_cd)
                                 )
                             }
                         },
@@ -302,7 +304,7 @@ fun RecoverPasswordScreen(
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Text("Guardar", fontSize = 16.sp)
+                            Text(stringResource(R.string.edit_profile_save), fontSize = 16.sp)
                         }
                     }
                 }

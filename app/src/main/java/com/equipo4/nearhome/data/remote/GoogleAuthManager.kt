@@ -14,6 +14,7 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
 import java.io.IOException
+import com.equipo4.nearhome.util.AppStrings
 
 class GoogleAuthManager(private val context: Context) {
 
@@ -74,15 +75,15 @@ class GoogleAuthManager(private val context: Context) {
             // Firebase no contestó a tiempo
             Log.w(TAG, "Firebase no respondió en ${ESPERA_FIREBASE_MS / 1000} s")
             firebaseAuth.signOut()
-            Result.failure(Exception("Google tardó demasiado en responder. Revisa tu conexión a internet e inténtalo de nuevo."))
+            Result.failure(Exception(AppStrings.get(R.string.google_err_timeout)))
         } catch (e: IOException) {
             // Error de conexión a internet
             Log.w(TAG, "Sin conexión al iniciar sesión con Google: ${e.javaClass.simpleName}: ${e.message}")
-            Result.failure(Exception("No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo de nuevo."))
+            Result.failure(Exception(AppStrings.get(R.string.network_error_connection)))
         } catch (e: Exception) {
             // Cualquier otro error: se deja en Logcat cuál fue (los mensajes de Firebase no traen tokens)
             Log.w(TAG, "Falló el inicio de sesión con Google: ${e.javaClass.simpleName}: ${e.message}")
-            Result.failure(Exception("No se pudo iniciar sesión con Google. Inténtalo de nuevo."))
+            Result.failure(Exception(AppStrings.get(R.string.google_err_signin)))
         }
     }
 

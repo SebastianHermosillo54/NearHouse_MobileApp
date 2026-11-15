@@ -4,11 +4,13 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.equipo4.nearhome.data.local.SessionManager
+import com.equipo4.nearhome.R
 import com.equipo4.nearhome.di.NetworkModule
 import com.equipo4.nearhome.network.AuthApi
 import com.equipo4.nearhome.network.NuevaContrasenaRecuperarRequest
 import com.equipo4.nearhome.network.SolicitarCodigoRecuperarRequest
 import com.equipo4.nearhome.network.VerificarCodigoRecuperarRequest
+import com.equipo4.nearhome.util.AppStrings
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -137,16 +139,16 @@ class RecoverPasswordViewModel(application: Application) : AndroidViewModel(appl
                     }
                 } else {
                     val rawError = response.errorBody()?.string()
-                    val errorMsg = parseErrorMessage(rawError, "El código es incorrecto o ya venció")
+                    val errorMsg = parseErrorMessage(rawError, AppStrings.get(R.string.acc_err_code_wrong))
                     _uiState.update { it.copy(isVerifyingCode = false, otpErrorMessage = errorMsg) }
                 }
             } catch (_: IOException) {
                 _uiState.update {
-                    it.copy(isVerifyingCode = false, otpErrorMessage = "No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo de nuevo")
+                    it.copy(isVerifyingCode = false, otpErrorMessage = AppStrings.get(R.string.network_error_connection))
                 }
             } catch (_: Exception) {
                 _uiState.update {
-                    it.copy(isVerifyingCode = false, otpErrorMessage = "Ocurrió un error inesperado. Inténtalo de nuevo")
+                    it.copy(isVerifyingCode = false, otpErrorMessage = AppStrings.get(R.string.error_unexpected_retry))
                 }
             }
         }
@@ -168,16 +170,16 @@ class RecoverPasswordViewModel(application: Application) : AndroidViewModel(appl
                 )
                 if (response.isSuccessful) {
                     limpiarEstadoMemoria()
-                    onSuccessFinished?.invoke("Contraseña actualizada. Inicia sesión con tu nueva contraseña")
+                    onSuccessFinished?.invoke(AppStrings.get(R.string.recover_password_updated))
                 } else {
                     val rawError = response.errorBody()?.string()
-                    val errorMsg = parseErrorMessage(rawError, "Error al guardar la contraseña")
+                    val errorMsg = parseErrorMessage(rawError, AppStrings.get(R.string.acc_err_save_password))
                     if (response.code() == 409) {
                         _uiState.update {
                             it.copy(
                                 isSavingPassword = false,
                                 step = RecoverStep.REQUEST_CODE,
-                                emailError = "El tiempo para cambiar tu contraseña terminó. Vuelve a empezar."
+                                emailError = AppStrings.get(R.string.acc_err_password_expired)
                             )
                         }
                     } else {
@@ -188,14 +190,14 @@ class RecoverPasswordViewModel(application: Application) : AndroidViewModel(appl
                 _uiState.update {
                     it.copy(
                         isSavingPassword = false,
-                        passwordError = "No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo de nuevo"
+                        passwordError = AppStrings.get(R.string.network_error_connection)
                     )
                 }
             } catch (_: Exception) {
                 _uiState.update {
                     it.copy(
                         isSavingPassword = false,
-                        passwordError = "Ocurrió un error inesperado. Inténtalo de nuevo"
+                        passwordError = AppStrings.get(R.string.error_unexpected_retry)
                     )
                 }
             }

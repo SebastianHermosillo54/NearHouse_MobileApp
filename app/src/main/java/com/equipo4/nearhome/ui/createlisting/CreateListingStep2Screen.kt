@@ -54,6 +54,8 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.maps.android.compose.rememberMarkerState
 import java.io.File
+import com.google.maps.android.compose.ComposeMapColorScheme
+import com.equipo4.nearhome.ui.common.isNearHouseDark
 
 private const val MAX_PHOTOS = MAX_PHOTOS_APP
 
@@ -573,6 +575,8 @@ private fun LocationMap(lat: Double, lng: Double) {
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraState,
+            // Sigue el tema de la app (claro u oscuro), no el del sistema
+            mapColorScheme = if (isNearHouseDark()) ComposeMapColorScheme.DARK else ComposeMapColorScheme.LIGHT,
             uiSettings = MapUiSettings(
                 zoomControlsEnabled = false, mapToolbarEnabled = false,
                 scrollGesturesEnabled = false, zoomGesturesEnabled = false,

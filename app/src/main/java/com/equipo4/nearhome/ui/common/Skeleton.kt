@@ -17,6 +17,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.res.stringResource
+import com.equipo4.nearhome.R
 
 /**
  * Modifier personalizado para aplicar un efecto de carga tipo Skeleton (Shimmer)
@@ -64,12 +66,13 @@ fun Modifier.shimmerSkeleton(
 @Composable
 fun SkeletonContainer(
     modifier: Modifier = Modifier,
-    contentDescriptionText: String = "Cargando",
+    contentDescriptionText: String? = null,
     content: @Composable () -> Unit
 ) {
+    val descripcion = contentDescriptionText ?: stringResource(R.string.common_loading)
     Box(
         modifier = modifier.clearAndSetSemantics {
-            contentDescription = contentDescriptionText
+            contentDescription = descripcion
         }
     ) {
         content()

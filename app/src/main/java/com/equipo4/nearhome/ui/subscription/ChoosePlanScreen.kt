@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -41,11 +42,26 @@ fun ChoosePlanScreen(
 ) {
     val ui by viewModel.uiState.collectAsState()
     var mostrarDialogoCancelar by remember { mutableStateOf(false) }
+    val locale = LocalConfiguration.current.locales[0]
+
+    // Mensaje del error en el idioma de la app (por código cuando el API lo manda)
+    val mensajeError = ui.errorAccion?.let { mensaje ->
+        when {
+            ui.errorCodigo == "SIN_PLAN_ACTIVO" -> stringResource(R.string.plan_cancel_error_no_plan)
+            ui.errorCodigo == "PLAN_YA_CANCELADO" -> stringResource(R.string.plan_cancel_error_already)
+            mensaje == "NETWORK_ERROR" -> stringResource(R.string.network_error_connection)
+            mensaje == "UNEXPECTED_ERROR" || mensaje == "NO_USER" -> stringResource(R.string.error_unexpected_retry)
+            else -> mensaje
+        }
+    }
 
     if (mostrarDialogoCancelar) {
         NearHomeAlertDialog(
             onDismissRequest = {
-                if (!ui.guardando) mostrarDialogoCancelar = false
+                if (!ui.guardando) {
+                    mostrarDialogoCancelar = false
+                    viewModel.limpiarError()
+                }
             },
             title = {
                 Text(
@@ -59,7 +75,9 @@ fun ChoosePlanScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = stringResource(R.string.cancel_subscription_dialog_body),
+                        text = ui.planActualVence?.let {
+                            stringResource(R.string.cancel_subscription_dialog_body_date, PlanDates.formatear(it, locale))
+                        } ?: stringResource(R.string.cancel_subscription_dialog_body),
                         fontSize = 14.sp,
                         color = SubscriptionColors.textBody
                     )
@@ -73,9 +91,9 @@ fun ChoosePlanScreen(
                             CircularProgressIndicator()
                         }
                     }
-                    if (ui.errorAccion != null) {
+                    if (mensajeError != null) {
                         Text(
-                            text = ui.errorAccion ?: "",
+                            text = mensajeError,
                             fontSize = 13.sp,
                             color = SubscriptionColors.errorStrong
                         )
@@ -93,22 +111,51 @@ fun ChoosePlanScreen(
                     },
                     enabled = !ui.guardando,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFDC2626)
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
                     )
                 ) {
                     Text(
                         stringResource(R.string.cancel_subscription_dialog_confirm),
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        fontWeight = FontWeight.Bold
                     )
                 }
             },
             dismissButton = {
                 TextButton(
-                    onClick = { mostrarDialogoCancelar = false },
+                    onClick = {
+                        mostrarDialogoCancelar = false
+                        viewModel.limpiarError()
+                    },
                     enabled = !ui.guardando
                 ) {
                     Text(stringResource(R.string.common_cancel))
+                }
+            }
+        )
+    }
+
+    // Confirmación: el plan ya no se renueva, pero los anuncios se ven hasta la fecha pagada
+    ui.cancelacionHecha?.let { vence ->
+        AlertDialog(
+            onDismissRequest = viewModel::cerrarConfirmacionCancelacion,
+            title = {
+                Text(
+                    text = stringResource(R.string.plan_cancel_success_title),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(R.string.plan_cancel_success_body, PlanDates.formatear(vence, locale)),
+                    fontSize = 14.sp,
+                    color = SubscriptionColors.textBody
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = viewModel::cerrarConfirmacionCancelacion) {
+                    Text(stringResource(R.string.common_understood))
                 }
             }
         )
@@ -155,6 +202,25 @@ fun ChoosePlanScreen(
                     .padding(horizontal = 20.dp, vertical = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Plan cancelado que sigue vigente: ya no sale como "Plan actual"
+                if (ui.planCanceladoNombre != null && ui.planCanceladoVence != null) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = stringResource(
+                                R.string.plan_cancelled_banner,
+                                ui.planCanceladoNombre.orEmpty(),
+                                PlanDates.formatear(ui.planCanceladoVence.orEmpty(), locale)
+                            ),
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+                }
                 if (motivoCrear || motivoLimite) {
                     Surface(
                         color = MaterialTheme.colorScheme.primaryContainer,
@@ -244,7 +310,7 @@ private fun PlanCard(
                                 text = stringResource(R.string.plan_current_btn),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF16A34A),
+                                color = SubscriptionColors.successIcon,
                                 modifier = Modifier.padding(bottom = 2.dp)
                             )
                         }
@@ -280,7 +346,7 @@ private fun PlanCard(
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = when {
-                            esActual -> Color(0xFFDC2626)
+                            esActual -> MaterialTheme.colorScheme.error
                             esPrueba -> Color(0xFF16A34A)
                             else -> SubscriptionColors.brand
                         }

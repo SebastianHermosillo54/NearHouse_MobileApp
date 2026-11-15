@@ -383,7 +383,7 @@ private fun SignUpFormContent(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(
                         painter = painterResource(id = R.drawable.ic_google),
-                        contentDescription = "Google",
+                        contentDescription = stringResource(R.string.google_logo_cd),
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))

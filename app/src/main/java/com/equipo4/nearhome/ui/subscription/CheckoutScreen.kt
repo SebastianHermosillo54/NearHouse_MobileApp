@@ -271,7 +271,7 @@ fun CheckoutScreen(
                 if (showErrors && cardNumber.text.filter { it.isDigit() }.length < 16) {
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        text = "! Formato inválido (16 dígitos)",
+                        text = stringResource(R.string.checkout_card_invalid),
                         fontSize = 11.sp,
                         color = SubscriptionColors.errorStrong,
                         modifier = Modifier.padding(start = 4.dp)
@@ -387,7 +387,7 @@ fun CheckoutScreen(
             if (showErrors && !isComplete) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "! Por favor, complete los campos obligatorios.",
+                    text = stringResource(R.string.checkout_required_fields),
                     fontSize = 12.sp,
                     color = SubscriptionColors.errorStrong,
                     modifier = Modifier.padding(start = 4.dp)
@@ -398,8 +398,8 @@ fun CheckoutScreen(
             apiError?.let { err ->
                 Spacer(Modifier.height(10.dp))
                 val errorText = when (err) {
-                    "NETWORK_ERROR" -> "No hay conexión a internet."
-                    "UNEXPECTED_ERROR" -> "Ocurrió un error inesperado. Inténtalo de nuevo."
+                    "NETWORK_ERROR" -> stringResource(R.string.network_error_connection)
+                    "UNEXPECTED_ERROR" -> stringResource(R.string.error_unexpected_retry)
                     else -> err
                 }
                 Text(errorText, fontSize = 13.sp, color = SubscriptionColors.errorStrong)

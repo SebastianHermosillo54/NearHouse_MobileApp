@@ -18,10 +18,19 @@ data class ChoosePlanUiState(
     val errorCarga: Boolean = false,
     val errorCargaMensaje: String? = null,
     val pruebaDisponible: Boolean = false,
+    /** Plan vigente y sin cancelar: sale como "Plan actual" y se puede cancelar. */
     val planActualId: Int? = null,
+    /** Fecha ISO en que vence el plan actual (para el aviso de cancelar). */
+    val planActualVence: String? = null,
+    /** Plan cancelado que sigue vigente: ya no sale como actual; se avisa hasta cuándo se ven los anuncios. */
+    val planCanceladoNombre: String? = null,
+    val planCanceladoVence: String? = null,
+    /** Fecha ISO hasta la que se ven los anuncios, justo después de cancelar (muestra la confirmación). */
+    val cancelacionHecha: String? = null,
     val selectedPlanId: Int? = null,
     val guardando: Boolean = false,
-    val errorAccion: String? = null
+    val errorAccion: String? = null,
+    val errorCodigo: String? = null
 )
 
 class ChoosePlanViewModel(application: Application) : AndroidViewModel(application) {
@@ -34,10 +43,15 @@ class ChoosePlanViewModel(application: Application) : AndroidViewModel(applicati
     init {
         viewModelScope.launch {
             CurrentUserStore.user.collect { u ->
+                val plan = u?.plan
+                val cancelado = plan?.takeIf { it.vigente && it.cancelado }
                 _uiState.update {
                     it.copy(
                         pruebaDisponible = u?.pruebaDisponible == true,
-                        planActualId = u?.plan?.takeIf { p -> p.vigente }?.id
+                        planActualId = plan?.takeIf { p -> p.activoSinCancelar }?.id,
+                        planActualVence = plan?.takeIf { p -> p.activoSinCancelar }?.fechaVencimiento,
+                        planCanceladoNombre = cancelado?.nombre,
+                        planCanceladoVence = cancelado?.fechaVencimiento
                     )
                 }
             }
@@ -71,13 +85,15 @@ class ChoosePlanViewModel(application: Application) : AndroidViewModel(applicati
     fun contratar(plan: SubscriptionPlan, onDone: () -> Unit) {
         if (_uiState.value.guardando) return
         viewModelScope.launch {
-            _uiState.update { it.copy(guardando = true, errorAccion = null) }
+            _uiState.update { it.copy(guardando = true, errorAccion = null, errorCodigo = null) }
             when (val r = repo.contratar(plan.id)) {
                 is Resultado.Ok -> {
                     _uiState.update { it.copy(guardando = false) }
                     onDone()
                 }
-                is Resultado.Error -> _uiState.update { it.copy(guardando = false, errorAccion = r.mensaje) }
+                is Resultado.Error -> _uiState.update {
+                    it.copy(guardando = false, errorAccion = r.mensaje, errorCodigo = r.codigo)
+                }
             }
         }
     }
@@ -85,14 +101,26 @@ class ChoosePlanViewModel(application: Application) : AndroidViewModel(applicati
     fun cancelarPlan(onDone: () -> Unit = {}) {
         if (_uiState.value.guardando) return
         viewModelScope.launch {
-            _uiState.update { it.copy(guardando = true, errorAccion = null) }
+            _uiState.update { it.copy(guardando = true, errorAccion = null, errorCodigo = null) }
             when (val r = repo.cancelarPlan()) {
                 is Resultado.Ok -> {
-                    _uiState.update { it.copy(guardando = false) }
+                    _uiState.update {
+                        it.copy(guardando = false, cancelacionHecha = r.valor.plan?.fechaVencimiento)
+                    }
                     onDone()
                 }
-                is Resultado.Error -> _uiState.update { it.copy(guardando = false, errorAccion = r.mensaje) }
+                is Resultado.Error -> _uiState.update {
+                    it.copy(guardando = false, errorAccion = r.mensaje, errorCodigo = r.codigo)
+                }
             }
         }
+    }
+
+    fun limpiarError() {
+        _uiState.update { it.copy(errorAccion = null, errorCodigo = null) }
+    }
+
+    fun cerrarConfirmacionCancelacion() {
+        _uiState.update { it.copy(cancelacionHecha = null) }
     }
 }

@@ -80,7 +80,7 @@ class SignUpViewModel(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            emailErrorMessage = error.message ?: "No se pudo iniciar sesión con Google. Inténtalo de nuevo."
+                            emailErrorMessage = error.message ?: AppStrings.get(R.string.google_err_signin)
                         )
                     }
                 }

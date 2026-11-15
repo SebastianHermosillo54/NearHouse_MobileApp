@@ -185,8 +185,13 @@ data class PlanUsuarioDto(
     val nombre: String,
     val fechaInicio: String,
     val fechaVencimiento: String,
-    val vigente: Boolean
-)
+    val vigente: Boolean,
+    /** Lo canceló: ya no se renueva; sus anuncios se ven hasta [fechaVencimiento] y luego se ocultan. */
+    val cancelado: Boolean = false
+) {
+    /** Plan que se está pagando (vigente y sin cancelar): es el que sale como "Plan actual". */
+    val activoSinCancelar: Boolean get() = vigente && !cancelado
+}
 
 data class ContratarPlanRequest(val planId: Int)
 
@@ -299,7 +304,7 @@ interface AuthApi {
     @POST("api/v1/usuarios/me/plan")
     suspend fun contratarPlan(@Body request: ContratarPlanRequest): Response<ContratarPlanResponse>
 
-    // NUEVO: Cancelar plan
+    // Cancela el plan: sigue vigente (y sus anuncios visibles) hasta la fecha de vencimiento
     @POST("api/v1/usuarios/me/plan/cancelar")
     suspend fun cancelarPlan(): Response<ContratarPlanResponse>
 }

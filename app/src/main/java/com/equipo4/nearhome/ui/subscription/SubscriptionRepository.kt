@@ -8,6 +8,7 @@ import com.equipo4.nearhome.data.session.CurrentUserStore
 import com.equipo4.nearhome.di.NetworkModule
 import com.equipo4.nearhome.network.AuthApi
 import com.equipo4.nearhome.network.ContratarPlanRequest
+import com.equipo4.nearhome.network.ContratarPlanResponse
 import com.equipo4.nearhome.network.PlanDto
 import com.equipo4.nearhome.network.UsuarioMeDto
 import retrofit2.Response
@@ -33,30 +34,25 @@ class SubscriptionRepository(context: Context) {
      * se guarda el token, el rol y el usuario, para que la app ya no lo vea como comprador.
      */
     suspend fun contratar(planId: Int): Resultado<UsuarioMeDto> =
-        when (val r = llamar { api.contratarPlan(ContratarPlanRequest(planId)) }) {
-            is Resultado.Ok -> {
-                session.saveToken(r.valor.token)
-                session.saveUser(name = r.valor.usuario.nombre, role = r.valor.usuario.rol)
-                CurrentUserStore.set(r.valor.usuario)
-                Resultado.Ok(r.valor.usuario)
-            }
-            is Resultado.Error -> Resultado.Error(r.mensaje, r.codigo)
-        }
+        guardarSesion(llamar { api.contratarPlan(ContratarPlanRequest(planId)) })
 
     /**
-     * Cancela el plan en el servidor: el usuario pasa a Comprador y sus anuncios se ocultan.
-     * Se guarda el token y el usuario que devuelve el API, igual que al contratar.
+     * Cancela el plan en el servidor. No se quita en este momento: sigue vigente (y sus anuncios
+     * visibles) hasta la fecha de vencimiento; después el servidor lo pasa a comprador.
      */
     suspend fun cancelarPlan(): Resultado<UsuarioMeDto> =
-        when (val r = llamar { api.cancelarPlan() }) {
-            is Resultado.Ok -> {
-                session.saveToken(r.valor.token)
-                session.saveUser(name = r.valor.usuario.nombre, role = r.valor.usuario.rol)
-                CurrentUserStore.set(r.valor.usuario)
-                Resultado.Ok(r.valor.usuario)
-            }
-            is Resultado.Error -> Resultado.Error(r.mensaje, r.codigo)
+        guardarSesion(llamar { api.cancelarPlan() })
+
+    /** Guarda el token nuevo, el rol y el usuario que regresan contratar y cancelar. */
+    private fun guardarSesion(r: Resultado<ContratarPlanResponse>): Resultado<UsuarioMeDto> = when (r) {
+        is Resultado.Ok -> {
+            session.saveToken(r.valor.token)
+            session.saveUser(name = r.valor.usuario.nombre, role = r.valor.usuario.rol)
+            CurrentUserStore.set(r.valor.usuario)
+            Resultado.Ok(r.valor.usuario)
         }
+        is Resultado.Error -> Resultado.Error(r.mensaje, r.codigo)
+    }
 
     private suspend fun <T> llamar(bloque: suspend () -> Response<T>): Resultado<T> = try {
         val respuesta = bloque()

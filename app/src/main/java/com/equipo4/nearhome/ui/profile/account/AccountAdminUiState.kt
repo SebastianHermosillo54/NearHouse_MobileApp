@@ -9,10 +9,12 @@ data class UserAccountData(
     val email: String,
     val phone: String,
     val role: UserRole,
-    val planName: String? = null,
-    val planStatus: String? = null,
-    val planExpired: Boolean = false,
-    val renewalDate: String? = null,
+    /** Datos del plan tal como llegan del API; los textos se arman en la pantalla (así cambian con el idioma). */
+    val planNombre: String? = null,
+    val planVigente: Boolean = false,
+    val planCancelado: Boolean = false,
+    /** Fecha ISO de vencimiento. */
+    val planVence: String? = null,
     val isGoogleUser: Boolean = false,
     val tieneContrasena: Boolean = true
 )

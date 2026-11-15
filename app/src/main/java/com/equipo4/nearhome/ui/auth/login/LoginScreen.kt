@@ -168,14 +168,14 @@ private fun LoginContent(
 
             Image(
                 painter = nearHouseLogoPainter(),
-                contentDescription = "NearHouse Logo",
+                contentDescription = stringResource(R.string.logo_cd),
                 modifier = Modifier.size(width = 60.dp, height = 59.dp)
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "¡BIENVENIDO A NEARHOUSE!",
+                text = stringResource(R.string.login_title),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Default,
@@ -186,7 +186,7 @@ private fun LoginContent(
             Spacer(modifier = Modifier.height(14.dp))
 
             Text(
-                text = "Inicio de Sesión",
+                text = stringResource(R.string.login_subtitle),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = cs.onSurface
@@ -201,7 +201,7 @@ private fun LoginContent(
             // Campo Correo
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = "Correo:",
+                    text = stringResource(R.string.login_email_label),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     color = cs.onSurface
@@ -210,7 +210,7 @@ private fun LoginContent(
                 OutlinedTextField(
                     value = uiState.email,
                     onValueChange = onEmailChange,
-                    placeholder = { Text("email@domain.com", color = cs.onSurfaceVariant) },
+                    placeholder = { Text(stringResource(R.string.login_email_hint), color = cs.onSurfaceVariant) },
                     singleLine = true,
                     enabled = !uiState.isLoading,
                     keyboardOptions = KeyboardOptions(
@@ -236,7 +236,7 @@ private fun LoginContent(
             // Campo Contraseña
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = "Contraseña:",
+                    text = stringResource(R.string.login_password_label),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     color = cs.onSurface
@@ -253,7 +253,7 @@ private fun LoginContent(
                         IconButton(onClick = onTogglePasswordVisibility) {
                             Icon(
                                 imageVector = if (uiState.isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                contentDescription = "Mostrar u ocultar contraseña",
+                                contentDescription = stringResource(R.string.acc_toggle_password_cd),
                                 tint = cs.onSurfaceVariant
                             )
                         }
@@ -301,10 +301,10 @@ private fun LoginContent(
                 Text(
                     text = buildAnnotatedString {
                         withStyle(style = SpanStyle(color = cs.onSurfaceVariant)) {
-                            append("¿Olvidaste tu contraseña?. ")
+                            append(stringResource(R.string.login_forgot_password_question))
                         }
                         withStyle(style = SpanStyle(color = cs.primary, fontWeight = FontWeight.Bold)) {
-                            append("Recuperar contraseña")
+                            append(stringResource(R.string.login_forgot_password_action))
                         }
                     },
                     fontSize = 12.sp,
@@ -337,7 +337,7 @@ private fun LoginContent(
                     )
                 } else {
                     Text(
-                        text = "Entrar",
+                        text = stringResource(R.string.login_btn_enter),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -353,7 +353,7 @@ private fun LoginContent(
             ) {
                 HorizontalDivider(modifier = Modifier.weight(1f), color = cs.outlineVariant)
                 Text(
-                    text = "o",
+                    text = stringResource(R.string.common_or),
                     fontSize = 14.sp,
                     color = cs.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 12.dp)
@@ -382,12 +382,12 @@ private fun LoginContent(
                 ) {
                     Image(
                         painter = painterResource(id = R.drawable.ic_google),
-                        contentDescription = "Logo Google",
+                        contentDescription = stringResource(R.string.google_logo_cd),
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Continuar con Google",
+                        text = stringResource(R.string.signup_continue_google),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
                         color = cs.onSurface
@@ -404,10 +404,10 @@ private fun LoginContent(
             Text(
                 text = buildAnnotatedString {
                     withStyle(style = SpanStyle(color = cs.onSurfaceVariant)) {
-                        append("No tengo cuenta. ")
+                        append(stringResource(R.string.login_no_account))
                     }
                     withStyle(style = SpanStyle(color = cs.primary, fontWeight = FontWeight.Bold)) {
-                        append("Registrarme")
+                        append(stringResource(R.string.login_register_action))
                     }
                 },
                 fontSize = 12.sp,
