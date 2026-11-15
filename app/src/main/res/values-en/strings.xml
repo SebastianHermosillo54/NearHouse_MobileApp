@@ -1425,4 +1425,7 @@
     <string name="acc_cancel_plan_confirm">Yes, cancel plan</string>
     <string name="acc_err_delete_account">The account could not be deleted</string>
     <string name="acc_err_cancel_plan">The plan could not be cancelled</string>
+    <!--  Compartir anuncio  -->
+    <string name="detail_share_text">%1$s\n%2$s · %3$s\n\nSee it on NearHouse: %4$s</string>
+    <string name="detail_share_chooser">Share listing</string>
 </resources>

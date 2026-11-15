@@ -14,6 +14,9 @@ object NetworkModule {
     /** URL de la foto. El parámetro v cambia cuando la foto cambia, para no usar la vieja en caché. */
     fun fotoPerfilUrl(version: String): String = "${BASE_URL}api/v1/usuarios/me/foto?v=$version"
 
+    /** Página pública del anuncio para "Compartir" (muestra foto, título y precio, y abre la app). */
+    fun enlaceCompartir(publicacionId: String): String = "${BASE_URL}p/$publicacionId"
+
     fun provideOkHttpClient(sessionManager: SessionManager): OkHttpClient {
         // Nivel BASIC obligatorio para NO imprimir contraseñas ni tokens en Logcat
         val loggingInterceptor = HttpLoggingInterceptor().apply {

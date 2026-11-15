@@ -132,6 +132,7 @@ import com.equipo4.nearhome.ui.notifications.ContadorNotificaciones
 import androidx.compose.foundation.background
 import androidx.compose.material3.MaterialTheme
 import com.equipo4.nearhome.ui.subscription.SubscriptionSuccessScreen
+import android.content.Intent
 
 object AppRoutes {
     const val SPLASH = "splash"
@@ -224,6 +225,39 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         ContadorNotificaciones.refrescar(applicationContext)
     }
+
+    // La app ya estaba abierta y llega un enlace (por ejemplo, "Ver en NearHouse" de un anuncio compartido):
+    // se vuelve a armar la pantalla para que NearHouseApp lo lea y lo abra
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.data != null) {
+            setIntent(intent)
+            recreate()
+        }
+    }
+}
+
+/**
+ * Enlaces que pueden abrir una pantalla: notificaciones, el botón "Ver en NearHouse" de la página
+ * de un anuncio compartido (nearhouse://publication_detail/{id}) y el cambio de idioma.
+ * Cualquier otra ruta se ignora, porque el enlace puede venir de otra app o de una página web.
+ */
+private object EnlacesEntrantes {
+    private val validas = listOf(
+        Regex("home"),
+        Regex("profile"),
+        Regex("account_admin"),
+        Regex("my_listings"),
+        Regex("publication_detail/\\d+"),
+        Regex("user_profile/\\d+")
+    )
+
+    /** Ruta que llegó sin sesión; se abre al iniciar sesión. */
+    var pendiente: String? = null
+
+    fun esValida(ruta: String): Boolean = validas.any { it.matches(ruta) }
+
+    fun tomarPendiente(): String? = pendiente.also { pendiente = null }
 }
 
 @Composable
@@ -250,19 +284,28 @@ fun NearHouseApp() {
     )
     val googleAuthState by googleAuthViewModel.uiState.collectAsState()
 
+    /** Abre la pantalla de un enlace (notificación, anuncio compartido o cambio de idioma). */
+    val abrirEnlace: (String) -> Unit = { ruta ->
+        if (ruta == AppRoutes.MY_LISTINGS) {
+            abrirMiPerfil()
+        } else {
+            navController.navigate(ruta) {
+                popUpTo(AppRoutes.HOME) { inclusive = false }
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         val intentData = (context as? MainActivity)?.intent?.data
         if (intentData != null) {
-            val ruta = intentData.toString().removePrefix("nearhouse://")
-            if (ruta.isNotEmpty()) {
+            val ruta = intentData.toString().removePrefix("nearhouse://").trimEnd('/')
+            // Solo pantallas conocidas: el enlace puede venir de otra app o de una página web
+            if (EnlacesEntrantes.esValida(ruta)) {
                 if (sessionManager.isLoggedIn()) {
-                    if (ruta == AppRoutes.MY_LISTINGS) {
-                        abrirMiPerfil()
-                    } else {
-                        navController.navigate(ruta) {
-                            popUpTo(AppRoutes.HOME) { inclusive = false }
-                        }
-                    }
+                    abrirEnlace(ruta)
+                } else {
+                    // Sin sesión: se abre después de iniciar sesión
+                    EnlacesEntrantes.pendiente = ruta
                 }
             }
             (context as? MainActivity)?.intent?.data = null
@@ -282,6 +325,7 @@ fun NearHouseApp() {
                 navController.navigate(AppRoutes.HOME) {
                     popUpTo(AppRoutes.LOGIN) { inclusive = true }
                 }
+                EnlacesEntrantes.tomarPendiente()?.let(abrirEnlace)
                 googleAuthViewModel.reiniciarEstado()
             }
             is GoogleAuthState.RequiresRegistration -> {
@@ -522,6 +566,8 @@ fun NearHouseApp() {
                     navController.navigate(AppRoutes.HOME) {
                         popUpTo(AppRoutes.LOGIN) { inclusive = true }
                     }
+                    // Si llegó por un enlace (por ejemplo, un anuncio compartido) sin sesión, ahora se abre
+                    EnlacesEntrantes.tomarPendiente()?.let(abrirEnlace)
                 },
                 onGoogleAuthTokenReceived = { token ->
                     googleAuthViewModel.procesarTokenGoogle(token)

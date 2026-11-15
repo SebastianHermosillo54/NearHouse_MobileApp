@@ -55,6 +55,7 @@ import com.google.maps.android.compose.rememberMarkerState
 import kotlin.math.roundToInt
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
+import com.equipo4.nearhome.di.NetworkModule
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -130,6 +131,17 @@ fun DetailPublicacionScreen(
 
                 is DetailPublicacionUiState.Success -> {
                     val pub = state.publicacion
+                    val context = LocalContext.current
+                    // Texto para "Compartir": título, modalidad y precio, y el enlace a la página pública del anuncio
+                    val textoCompartir = stringResource(
+                        R.string.detail_share_text,
+                        pub.titulo,
+                        stringResource(if (pub.esRenta) R.string.listing_mode_rent else R.string.listing_mode_sale),
+                        stringResource(R.string.property_price_format, String.format("%,.0f", pub.precio)) +
+                            (if (pub.esRenta) stringResource(R.string.detail_per_month) else ""),
+                        NetworkModule.enlaceCompartir(pub.id)
+                    )
+                    val tituloSelector = stringResource(R.string.detail_share_chooser)
 
                     DetailContent(
                         pub = pub,
@@ -156,7 +168,10 @@ fun DetailPublicacionScreen(
                                     showBottomSheet = false
                                     onEditClick()
                                 },
-                                onCompartir = { showBottomSheet = false },
+                                onCompartir = {
+                                    showBottomSheet = false
+                                    compartirAnuncio(context, pub.titulo, textoCompartir, tituloSelector)
+                                },
                                 onReportar = {
                                     showBottomSheet = false
                                     onReportClick()
@@ -733,4 +748,14 @@ private fun pinIcon(context: Context, type: PropertyType): BitmapDescriptor {
         draw(Canvas(bitmap))
     }
     return BitmapDescriptorFactory.fromBitmap(bitmap)
+}
+
+/** Abre el menú de Android para compartir (WhatsApp, Messenger, correo, copiar…) con el texto y el enlace. */
+private fun compartirAnuncio(context: Context, titulo: String, texto: String, tituloSelector: String) {
+    val enviar = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_SUBJECT, titulo)
+        putExtra(Intent.EXTRA_TEXT, texto)
+    }
+    context.startActivity(Intent.createChooser(enviar, tituloSelector))
 }
