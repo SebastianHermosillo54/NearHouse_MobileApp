@@ -1267,6 +1267,9 @@
     <string name="listing_deactivated_by_admin_notice">Desactivado por un administrador. Motivo: %1$s</string>
     <string name="status_deactivated_by_admin">Desactivado por administrador</string>
     <string name="listing_reactivate_blocked_by_admin">Este anuncio fue desactivado por un administrador. Solo un administrador puede reactivarlo.</string>
+
+    <string name="signup_pw_err_special">Al menos un carácter especial (!@#$%*?._-)</string>
+    <string name="signup_pw_err_sequence">Sin secuencias como 123, abc, 321 o cba</string>
     <!--  Apelaciones: formulario de quien apela  -->
     <string name="appeal_title">Apelar decisión</string>
     <string name="appeal_question">¿Por qué crees que la decisión no es correcta?</string>

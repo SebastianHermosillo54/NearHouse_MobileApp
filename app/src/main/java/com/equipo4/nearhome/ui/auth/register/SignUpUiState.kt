@@ -4,6 +4,8 @@ package com.equipo4.nearhome.ui.auth.register
 
 import com.equipo4.nearhome.util.AppStrings
 import com.equipo4.nearhome.R
+import com.equipo4.nearhome.util.PasswordValidator
+
 enum class SignUpStep {
     FORM,
     OTP_VERIFICATION,
@@ -91,20 +93,22 @@ data class SignUpUiState(
     private val hasDigit: Boolean get() = password.any { it.isDigit() }
     private val hasNoRepeatedDigits: Boolean get() = !Regex("([0-9])\\1").containsMatchIn(password)
 
-    val isPasswordValid: Boolean
-        get() = hasMinLength && hasLowercase && hasUppercase && hasDigit && hasNoRepeatedDigits
+    // Validaciones de Contraseña (actualizado)
+    val isPasswordValid: Boolean get() = PasswordValidator.isValid(password)
 
     val showPasswordError: Boolean
         get() = password.isNotEmpty() && !isPasswordValid
 
+    // Mensaje dinámico (si quieres mantener uno solo, o quitar y usar la lista de checks)
     val passwordErrorMessage: String?
         get() {
             if (password.isEmpty()) return null
-            if (!hasMinLength) return AppStrings.get(R.string.signup_pw_err_length)
-            if (!hasLowercase) return AppStrings.get(R.string.signup_pw_err_lower)
-            if (!hasUppercase) return AppStrings.get(R.string.signup_pw_err_upper)
-            if (!hasDigit) return AppStrings.get(R.string.signup_pw_err_digit)
-            if (!hasNoRepeatedDigits) return AppStrings.get(R.string.signup_pw_err_repeated)
+            if (!PasswordValidator.hasMinLength(password)) return AppStrings.get(R.string.signup_pw_err_length)
+            if (!PasswordValidator.hasUppercase(password)) return AppStrings.get(R.string.signup_pw_err_upper)
+            if (!PasswordValidator.hasLowercase(password)) return AppStrings.get(R.string.signup_pw_err_lower)
+            if (!PasswordValidator.hasDigit(password)) return AppStrings.get(R.string.signup_pw_err_digit)
+            if (!PasswordValidator.hasSpecialChar(password)) return AppStrings.get(R.string.signup_pw_err_special)
+            if (!PasswordValidator.hasNoSequences(password)) return AppStrings.get(R.string.signup_pw_err_sequence)
             return null
         }
 

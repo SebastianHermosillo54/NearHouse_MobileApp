@@ -75,6 +75,7 @@ import com.equipo4.nearhome.ui.profile.seller.EditProfileScreen
 import com.equipo4.nearhome.ui.profile.seller.MyListingsScreen
 import com.equipo4.nearhome.ui.subscription.CheckoutScreen
 import com.equipo4.nearhome.ui.subscription.ChoosePlanScreen
+import com.equipo4.nearhome.ui.subscription.SubscriptionSuccessScreen // NUEVO IMPORT
 import com.equipo4.nearhome.ui.saved.SavedScreen
 import com.equipo4.nearhome.ui.publicacion.detail.DetailPublicacionScreen
 import com.equipo4.nearhome.ui.publicacion.report.ReportCategoryScreen
@@ -127,6 +128,7 @@ import com.equipo4.nearhome.ui.notifications.TokenManager
 import com.equipo4.nearhome.ui.notifications.ContadorNotificaciones
 import androidx.compose.foundation.background
 import androidx.compose.material3.MaterialTheme
+import com.equipo4.nearhome.ui.subscription.SubscriptionSuccessScreen
 
 object AppRoutes {
     const val SPLASH = "splash"
@@ -181,6 +183,7 @@ object AppRoutes {
     const val CREATE_LISTING_PREVIEW = "create_listing_preview"
     const val SUBSCRIPTION = "subscription"
     const val CREATE_LISTING_EDIT = "create_listing_edit/{listingId}"
+    const val SUBSCRIPTION_SUCCESS = "subscription_success"
 }
 
 class MainActivity : AppCompatActivity() {
@@ -231,11 +234,6 @@ fun NearHouseApp() {
             .create(AuthApi::class.java)
     }
 
-    /**
-     * Abre "Mi perfil" (tus anuncios) dentro de la pestaña Perfil, como si se tocara esa pestaña.
-     * Así la campana sigue mostrando Notificaciones y "Atrás" regresa al menú de Perfil.
-     * Lo usan las notificaciones de tus anuncios y el final de crear o editar un anuncio.
-     */
     val abrirMiPerfil: () -> Unit = {
         navController.navigate(AppRoutes.PROFILE) {
             popUpTo(AppRoutes.HOME) { saveState = true }
@@ -284,8 +282,6 @@ fun NearHouseApp() {
                 googleAuthViewModel.reiniciarEstado()
             }
             is GoogleAuthState.RequiresRegistration -> {
-                // Usuario nuevo con Google: completa su perfil y verifica su teléfono por SMS
-                // con las mismas pantallas del registro normal. No necesita contraseña.
                 val proof = (googleAuthState as GoogleAuthState.RequiresRegistration).proofData
                 val apellidos = proof.apellidos.trim().split(Regex("\\s+"), limit = 2)
                 RegistroTemporal.limpiar()
@@ -489,6 +485,21 @@ fun NearHouseApp() {
             )
         }
 
+        // Pantalla de Éxito de Suscripción
+        composable(
+            route = "${AppRoutes.SUBSCRIPTION_SUCCESS}/{planName}",
+            arguments = listOf(navArgument("planName") { type = NavType.StringType })
+        ) { entry ->
+            SubscriptionSuccessScreen(
+                planName = entry.arguments?.getString("planName") ?: "",
+                onContinue = {
+                    navController.navigate(AppRoutes.PROFILE) {
+                        popUpTo(AppRoutes.SUBSCRIPTION_SUCCESS) { inclusive = true }
+                    }
+                }
+            )
+        }
+
         composable(AppRoutes.LOGIN) { entry ->
             LoginScreen(
                 onNavigateToRegister = {
@@ -543,7 +554,7 @@ fun NearHouseApp() {
                     }
                 },
                 onSignUpSuccess = {
-                    RegistroTemporal.googleProofToken = null // registro normal, no el de Google
+                    RegistroTemporal.googleProofToken = null
                     navController.navigate(AppRoutes.COMPLETE_PROFILE) {
                         popUpTo(AppRoutes.SIGN_UP) { inclusive = true }
                     }
@@ -1075,7 +1086,7 @@ fun NearHouseApp() {
                     if (!sessionManager.isLoggedIn()) {
                         navController.navigate(AppRoutes.LOGIN)
                     } else {
-                        navController.navigate("${AppRoutes.REPORT_GRAPH}/${ReportType.PUBLICACION.name}/$publicacionId")
+                        navController.navigate("${AppRoutes.REPORT_GRAPH}/$publicacionId")
                     }
                 },
                 onEditClick = {
@@ -1152,6 +1163,10 @@ fun NearHouseApp() {
                 onAppealClick = { appealId ->
                     navController.navigate("${AppRoutes.ADMIN_APPEAL_DETAIL}/$appealId") { launchSingleTop = true }
                 },
+                onBackClick = { navController.popBackStack() },
+                onNavigateToReports = { navController.navigate(AppRoutes.ADMIN_REPORTS) },
+                onNavigateToUsers = { navController.navigate(AppRoutes.ADMIN_USERS) },
+                onNavigateToAds = { navController.navigate(AppRoutes.ADMIN_LISTINGS) },
                 onBottomTabSelected = onBottomTab
             )
         }
@@ -1196,9 +1211,7 @@ fun NearHouseApp() {
         // Pantalla: Reportes
         composable(AppRoutes.ADMIN_REPORTS) {
             ReportsScreen(
-                onBackClick = {
-                    navController.popBackStack()
-                },
+                onBackClick = { navController.popBackStack() },
                 onReportClick = { reportId ->
                     navController.navigate("${AppRoutes.ADMIN_REPORT_DETAIL}/$reportId")
                 },
@@ -1246,9 +1259,7 @@ fun NearHouseApp() {
             val reportId = backStackEntry.arguments?.getString("reportId") ?: ""
             ReportDetailScreen(
                 reportId = reportId,
-                onBackClick = {
-                    navController.popBackStack()
-                },
+                onBackClick = { navController.popBackStack() },
                 onNavigateToConfirmation = { id ->
                     navController.navigate("${AppRoutes.ADMIN_REPORT_CONFIRMATION}/$id") {
                         popUpTo("${AppRoutes.ADMIN_REPORT_DETAIL}/$reportId") { inclusive = true }
@@ -1401,6 +1412,10 @@ fun NearHouseApp() {
                     ?.let { valor -> ReportType.entries.firstOrNull { it.name == valor } }
                     ?: ReportType.PUBLICACION
                 val objetivoId = parentEntry.arguments?.getString("objetivoId") ?: ""
+                val parentEntry = remember(entry) {
+                    navController.getBackStackEntry("${AppRoutes.REPORT_GRAPH}/{publicacionId}")
+                }
+                val publicacionId = parentEntry.arguments?.getString("publicacionId") ?: ""
                 val reportViewModel: ReportViewModel = viewModel(parentEntry)
 
                 // Antes de dibujar la pantalla, para que no se vean ni un instante las categorías del otro tipo.
@@ -1424,6 +1439,7 @@ fun NearHouseApp() {
                     onReportSubmitted = {
                         // Cierra todo el flujo y regresa a donde se abrió (detalle de la publicación o perfil)
                         navController.popBackStack(RUTA_REPORTE, inclusive = true)
+                        navController.popBackStack("${AppRoutes.REPORT_GRAPH}/{publicacionId}", inclusive = true)
                     }
                 )
             }
@@ -1485,7 +1501,7 @@ fun NearHouseApp() {
                     if (motivoCrear) navController.popBackStack(AppRoutes.PROFILE, inclusive = false)
                     else navController.popBackStack()
                 },
-                onSuccessFinished = {
+                onSuccessFinished = { planName ->
                     scope.launch {
                         runCatching { CurrentUserStore.refresh(authApi, sessionManager) }
                         if (motivoCrear) {
@@ -1493,7 +1509,9 @@ fun NearHouseApp() {
                                 popUpTo(AppRoutes.SUBSCRIPTION) { inclusive = true }
                             }
                         } else {
-                            navController.popBackStack(AppRoutes.ACCOUNT_ADMIN, inclusive = false)
+                            navController.navigate("${AppRoutes.SUBSCRIPTION_SUCCESS}/$planName") {
+                                popUpTo(AppRoutes.CHECKOUT) { inclusive = true }
+                            }
                         }
                     }
                 }

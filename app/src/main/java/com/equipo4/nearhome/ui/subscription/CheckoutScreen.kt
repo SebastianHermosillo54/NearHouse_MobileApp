@@ -1,8 +1,22 @@
 package com.equipo4.nearhome.ui.subscription
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,8 +27,26 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Redeem
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -39,7 +71,7 @@ import com.equipo4.nearhome.util.LogroSonidoEffect
 fun CheckoutScreen(
     planId: Int,
     onBackClick: () -> Unit = {},
-    onSuccessFinished: () -> Unit = {}
+    onSuccessFinished: (String) -> Unit = {} // Recibe el nombre del plan
 ) {
     val context = LocalContext.current
     val plan = remember(planId) {
@@ -69,6 +101,74 @@ fun CheckoutScreen(
 
     var showErrors by remember { mutableStateOf(false) }
 
+    // ---- ESTADO DE ÉXITO ----
+    if (successMessage != null) {
+        // Bloquea el botón "Atrás" del celular para que no regrese al pago
+        BackHandler { /* No hacer nada */ }
+
+        LogroSonidoEffect()
+        LaunchedEffect(Unit) {
+            if (eraComprador) NotificacionesHelper.mostrarBienvenidaVendedor(context)
+        }
+
+        // Pantalla de logro a pantalla completa
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .navigationBarsPadding()
+                    .statusBarsPadding()
+                    .padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .background(Color(0xFF52B768), shape = CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(64.dp)
+                    )
+                }
+                Spacer(Modifier.height(32.dp))
+                Text(
+                    text = "¡Plan actualizado!",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = "Tu plan ${plan.name} está activo.",
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(48.dp))
+                Button(
+                    onClick = { onSuccessFinished(plan.name) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Continuar", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+        return
+    }
+
+    // ---- PANTALLA DE PAGO ----
     val cardNumberFocusRequester = remember { FocusRequester() }
     val cardHolderFocusRequester = remember { FocusRequester() }
     val expiryFocusRequester = remember { FocusRequester() }
@@ -110,325 +210,282 @@ fun CheckoutScreen(
         },
         containerColor = SubscriptionColors.screenBg
     ) { innerPadding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp)
+                .imePadding()
+                .navigationBarsPadding()
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(20.dp)
-                    .imePadding()
-                    .navigationBarsPadding()
-            ) {
-                // Banner de prueba gratuita
-                if (plan.isFreeTrial) {
-                    Surface(
-                        color = SubscriptionColors.successBannerBg,
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, Color(0xFF16A34A))
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(14.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Redeem,
-                                contentDescription = null,
-                                tint = SubscriptionColors.successIcon,
-                                modifier = Modifier.size(32.dp)
-                            )
-                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text(
-                                    text = stringResource(R.string.free_trial_banner_title),
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = SubscriptionColors.textPrimary,
-                                    lineHeight = 16.sp
-                                )
-                                Text(
-                                    text = stringResource(R.string.free_trial_banner),
-                                    fontSize = 12.sp,
-                                    color = SubscriptionColors.textBody,
-                                    lineHeight = 16.sp
-                                )
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(16.dp))
-                }
-
-                // Resumen del plan
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.checkout_plan_format, plan.name),
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = SubscriptionColors.brand
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = "${plan.description} · ${plan.visibility}",
-                            fontSize = 13.sp,
-                            color = SubscriptionColors.textBody
-                        )
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text(
-                            text = plan.priceText,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = SubscriptionColors.brand,
-                            maxLines = 1,
-                            softWrap = false
-                        )
-                        Text(
-                            text = stringResource(R.string.price_per_month),
-                            fontSize = 14.sp,
-                            color = SubscriptionColors.textMuted,
-                            modifier = Modifier.padding(bottom = 2.dp),
-                            maxLines = 1,
-                            softWrap = false
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(16.dp))
-
-                Text(
-                    text = stringResource(R.string.payment_method_title),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = SubscriptionColors.textPrimary,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-
-                Spacer(Modifier.height(12.dp))
-
-                // Número de tarjeta
-                Column {
-                    Text(stringResource(R.string.card_number_label), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = SubscriptionColors.textLabel)
-                    Spacer(Modifier.height(4.dp))
-                    OutlinedTextField(
-                        value = cardNumber,
-                        onValueChange = viewModel::onCardNumberChanged,
-                        placeholder = { Text(stringResource(R.string.checkout_card_number_hint)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                        keyboardActions = KeyboardActions(onNext = { cardHolderFocusRequester.requestFocus() }),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true,
-                        isError = showErrors && cardNumber.text.filter { it.isDigit() }.length < 16,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(cardNumberFocusRequester)
-                    )
-                    if (showErrors && cardNumber.text.filter { it.isDigit() }.length < 16) {
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            text = "! Formato inválido(16 dígitos)",
-                            fontSize = 11.sp,
-                            color = SubscriptionColors.errorStrong,
-                            modifier = Modifier.padding(start = 4.dp)
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(12.dp))
-
-                // Nombre del titular
-                Column {
-                    Text(stringResource(R.string.card_holder_label), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = SubscriptionColors.textLabel)
-                    Spacer(Modifier.height(4.dp))
-                    OutlinedTextField(
-                        value = cardHolder,
-                        onValueChange = viewModel::onCardHolderChanged,
-                        placeholder = { Text(stringResource(R.string.checkout_cardholder_hint)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
-                        keyboardActions = KeyboardActions(onNext = { expiryFocusRequester.requestFocus() }),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true,
-                        isError = showErrors && cardHolder.text.isBlank(),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(cardHolderFocusRequester)
-                    )
-                }
-
-                Spacer(Modifier.height(12.dp))
-
-                // Vencimiento y CVV en una fila
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.card_expiry_label), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = SubscriptionColors.textLabel)
-                        Spacer(Modifier.height(4.dp))
-                        OutlinedTextField(
-                            value = expiry,
-                            onValueChange = viewModel::onExpiryChanged,
-                            placeholder = { Text(stringResource(R.string.checkout_expiry_hint)) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                            keyboardActions = KeyboardActions(onNext = { cvvFocusRequester.requestFocus() }),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true,
-                            isError = showErrors && expiry.text.filter { it.isDigit() }.length < 4,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .focusRequester(expiryFocusRequester)
-                        )
-                    }
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.card_cvv_label), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = SubscriptionColors.textLabel)
-                        Spacer(Modifier.height(4.dp))
-                        OutlinedTextField(
-                            value = cvv,
-                            onValueChange = viewModel::onCvvChanged,
-                            placeholder = { Text(stringResource(R.string.checkout_cvv_hint)) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-                            keyboardActions = KeyboardActions(onDone = {
-                                if (isComplete) {
-                                    viewModel.submit(onSuccessNavigation = onSuccessFinished)
-                                } else {
-                                    showErrors = true
-                                }
-                            }),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true,
-                            isError = showErrors && cvv.text.length < 3,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .focusRequester(cvvFocusRequester)
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(36.dp))
-
-                // Botón principal
-                Button(
-                    onClick = {
-                        if (isComplete) {
-                            viewModel.submit(onSuccessNavigation = onSuccessFinished)
-                        } else {
-                            showErrors = true
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
+            // Banner de prueba gratuita
+            if (plan.isFreeTrial) {
+                Surface(
+                    color = SubscriptionColors.successBannerBg,
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = SubscriptionColors.brand,
-                        disabledContainerColor = SubscriptionColors.brand.copy(alpha = 0.5f)
-                    )
+                    border = BorderStroke(1.dp, Color(0xFF16A34A))
                 ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                    } else {
-                        Text(
-                            text = if (plan.isFreeTrial) stringResource(R.string.activate_free_trial_btn) else stringResource(R.string.confirm_and_pay_btn),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFFFFFFF)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Redeem,
+                            contentDescription = null,
+                            tint = SubscriptionColors.successIcon,
+                            modifier = Modifier.size(32.dp)
                         )
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = stringResource(R.string.free_trial_banner_title),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = SubscriptionColors.textPrimary,
+                                lineHeight = 16.sp
+                            )
+                            Text(
+                                text = stringResource(R.string.free_trial_banner),
+                                fontSize = 12.sp,
+                                color = SubscriptionColors.textBody,
+                                lineHeight = 16.sp
+                            )
+                        }
                     }
                 }
+                Spacer(Modifier.height(16.dp))
+            }
 
-                if (showErrors && !isComplete) {
-                    Spacer(Modifier.height(8.dp))
+            // Resumen del plan
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "! Por favor, complete los campos obligatorios.",
-                        fontSize = 12.sp,
+                        text = stringResource(R.string.checkout_plan_format, plan.name),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = SubscriptionColors.brand
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "${plan.description} · ${plan.visibility}",
+                        fontSize = 13.sp,
+                        color = SubscriptionColors.textBody
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        text = plan.priceText,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = SubscriptionColors.brand,
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                    Text(
+                        text = stringResource(R.string.price_per_month),
+                        fontSize = 14.sp,
+                        color = SubscriptionColors.textMuted,
+                        modifier = Modifier.padding(bottom = 2.dp),
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            Text(
+                text = stringResource(R.string.payment_method_title),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = SubscriptionColors.textPrimary,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            // Número de tarjeta
+            Column {
+                Text(stringResource(R.string.card_number_label), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = SubscriptionColors.textLabel)
+                Spacer(Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = cardNumber,
+                    onValueChange = viewModel::onCardNumberChanged,
+                    placeholder = { Text(stringResource(R.string.checkout_card_number_hint)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { cardHolderFocusRequester.requestFocus() }),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    isError = showErrors && cardNumber.text.filter { it.isDigit() }.length < 16,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(cardNumberFocusRequester)
+                )
+                if (showErrors && cardNumber.text.filter { it.isDigit() }.length < 16) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "! Formato inválido (16 dígitos)",
+                        fontSize = 11.sp,
                         color = SubscriptionColors.errorStrong,
                         modifier = Modifier.padding(start = 4.dp)
                     )
                 }
+            }
 
-                // Error de la API (sin internet, etc.)
-                apiError?.let { err ->
-                    Spacer(Modifier.height(10.dp))
-                    val errorText = when (err) {
-                        "NETWORK_ERROR" -> stringResource(R.string.check_internet_connection)
-                        "UNEXPECTED_ERROR" -> stringResource(R.string.error_unexpected_retry)
-                        else -> err
-                    }
-                    Text(errorText, fontSize = 13.sp, color = SubscriptionColors.errorStrong)
-                }
+            Spacer(Modifier.height(12.dp))
 
-                Spacer(Modifier.height(16.dp))
-
-                // Texto debajo del botón
-                Text(
-                    text = if (plan.isFreeTrial) {
-                        stringResource(R.string.free_trial_footer)
-                    } else {
-                        stringResource(R.string.confirm_payment_footer)
-                    },
-                    fontSize = 12.sp,
-                    color = SubscriptionColors.textMuted,
-                    textAlign = TextAlign.Center,
+            // Nombre del titular
+            Column {
+                Text(stringResource(R.string.card_holder_label), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = SubscriptionColors.textLabel)
+                Spacer(Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = cardHolder,
+                    onValueChange = viewModel::onCardHolderChanged,
+                    placeholder = { Text(stringResource(R.string.checkout_cardholder_hint)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { expiryFocusRequester.requestFocus() }),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    isError = showErrors && cardHolder.text.isBlank(),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
+                        .focusRequester(cardHolderFocusRequester)
                 )
-
-                Spacer(Modifier.height(30.dp))
             }
 
-            // Pantalla de éxito
-            if (successMessage != null) {
-                LogroSonidoEffect()
-                LaunchedEffect(Unit) { if (eraComprador) NotificacionesHelper.mostrarBienvenidaVendedor(context) }
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = SubscriptionColors.screenBg
-                ) {
-                    Column(
+            Spacer(Modifier.height(12.dp))
+
+            // Vencimiento y CVV
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.card_expiry_label), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = SubscriptionColors.textLabel)
+                    Spacer(Modifier.height(4.dp))
+                    OutlinedTextField(
+                        value = expiry,
+                        onValueChange = viewModel::onExpiryChanged,
+                        placeholder = { Text(stringResource(R.string.checkout_expiry_hint)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { cvvFocusRequester.requestFocus() }),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true,
+                        isError = showErrors && expiry.text.filter { it.isDigit() }.length < 4,
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = successMessage!!,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = SubscriptionColors.textPrimary,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(Modifier.height(40.dp))
-                        Box(
-                            modifier = Modifier
-                                .size(160.dp)
-                                .background(Color(0xFF16A34A), shape = CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(90.dp)
-                            )
-                        }
-                    }
+                            .fillMaxWidth()
+                            .focusRequester(expiryFocusRequester)
+                    )
+                }
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.card_cvv_label), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = SubscriptionColors.textLabel)
+                    Spacer(Modifier.height(4.dp))
+                    OutlinedTextField(
+                        value = cvv,
+                        onValueChange = viewModel::onCvvChanged,
+                        placeholder = { Text(stringResource(R.string.checkout_cvv_hint)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = {
+                            if (isComplete) {
+                                // Llamada corregida
+                                viewModel.submit { planName -> onSuccessFinished(planName) }
+                            } else {
+                                showErrors = true
+                            }
+                        }),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true,
+                        isError = showErrors && cvv.text.length < 3,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(cvvFocusRequester)
+                    )
                 }
             }
+
+            Spacer(Modifier.height(36.dp))
+
+            // Botón principal
+            Button(
+                onClick = {
+                    if (isComplete) {
+                        // Llamada corregida
+                        viewModel.submit { planName -> onSuccessFinished(planName) }
+                    } else {
+                        showErrors = true
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = SubscriptionColors.brand,
+                    disabledContainerColor = SubscriptionColors.brand.copy(alpha = 0.5f)
+                )
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                } else {
+                    Text(
+                        text = if (plan.isFreeTrial) stringResource(R.string.activate_free_trial_btn) else stringResource(R.string.confirm_and_pay_btn),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFFFFFFF)
+                    )
+                }
+            }
+
+            if (showErrors && !isComplete) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "! Por favor, complete los campos obligatorios.",
+                    fontSize = 12.sp,
+                    color = SubscriptionColors.errorStrong,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+            }
+
+            // Error de la API
+            apiError?.let { err ->
+                Spacer(Modifier.height(10.dp))
+                val errorText = when (err) {
+                    "NETWORK_ERROR" -> "No hay conexión a internet."
+                    "UNEXPECTED_ERROR" -> "Ocurrió un error inesperado. Inténtalo de nuevo."
+                    else -> err
+                }
+                Text(errorText, fontSize = 13.sp, color = SubscriptionColors.errorStrong)
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // Texto debajo del botón
+            Text(
+                text = if (plan.isFreeTrial) {
+                    stringResource(R.string.free_trial_footer)
+                } else {
+                    stringResource(R.string.confirm_payment_footer)
+                },
+                fontSize = 12.sp,
+                color = SubscriptionColors.textMuted,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp)
+            )
+
+            Spacer(Modifier.height(30.dp))
         }
     }
 }

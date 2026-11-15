@@ -39,9 +39,9 @@ class CheckoutViewModel(
         val m = expDigits.take(2).toIntOrNull() ?: 0
 
         numDigits.length == 16 &&
-        holderText.isNotBlank() && holderText.all { it.isLetter() || it.isWhitespace() } &&
-        expDigits.length == 4 && m in 1..12 &&
-        cvvText.length == 3
+                holderText.isNotBlank() && holderText.all { it.isLetter() || it.isWhitespace() } &&
+                expDigits.length == 4 && m in 1..12 &&
+                cvvText.length == 3
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     fun onCardNumberChanged(input: TextFieldValue) {
@@ -130,7 +130,7 @@ class CheckoutViewModel(
         cvv.value = TextFieldValue(text = filteredText, selection = TextRange(newPos))
     }
 
-    fun submit(onSuccessNavigation: () -> Unit) {
+    fun submit(onSuccessNavigation: (String) -> Unit) { // <-- CAMBIO: recibe String
         if (!isComplete.value || isLoading.value) return
 
         apiError.value = null
@@ -143,7 +143,7 @@ class CheckoutViewModel(
                     val fecha = r.valor.plan?.let { PlanDates.formatear(it.fechaVencimiento, Locale.getDefault()) } ?: ""
                     successMessage.value = AppStrings.get(R.string.success_plan_active_until, plan.name, fecha)
                     delay(2200)
-                    onSuccessNavigation()
+                    onSuccessNavigation(plan.name) // <-- CAMBIO: pasa el nombre del plan
                 }
                 is Resultado.Error -> {
                     isLoading.value = false
