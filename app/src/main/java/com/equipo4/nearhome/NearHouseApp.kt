@@ -34,7 +34,16 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.equipo4.nearhome.ui.admin.AdminPanelScreen
+import com.equipo4.nearhome.ui.admin.appeals.AppealConfirmationScreen
+import com.equipo4.nearhome.ui.admin.appeals.AppealDetailScreen
+import com.equipo4.nearhome.ui.admin.appeals.AppealsScreen
+import com.equipo4.nearhome.ui.appeal.ApelacionEnCurso
+import com.equipo4.nearhome.ui.appeal.AppealScreen
+import com.equipo4.nearhome.ui.appeal.CuentaSuspendida
+import com.equipo4.nearhome.ui.appeal.CuentaSuspendidaDialog
+import com.equipo4.nearhome.ui.appeal.ObjetivoApelacion
 import com.equipo4.nearhome.domain.model.ListingAction
+import com.equipo4.nearhome.domain.model.ReportType
 import com.equipo4.nearhome.ui.admin.listings.AdminListingDetailScreen
 import com.equipo4.nearhome.ui.admin.listings.AdminListingsScreen
 import com.equipo4.nearhome.ui.admin.listings.AdminListingsViewModel
@@ -150,6 +159,11 @@ object AppRoutes {
     const val ADMIN_REPORTS = "admin_reports"
     const val ADMIN_REPORT_DETAIL = "admin_report_detail"
     const val ADMIN_REPORT_CONFIRMATION = "admin_report_confirmation"
+    const val ADMIN_APPEALS = "admin_appeals"
+    const val ADMIN_APPEAL_DETAIL = "admin_appeal_detail"
+    const val ADMIN_APPEAL_CONFIRMATION = "admin_appeal_confirmation"
+    /** "Apelar decisión": la decisión se guarda antes en ApelacionEnCurso. */
+    const val APPEAL = "appeal"
     const val ADMIN_USERS = "admin_users"
     const val ADMIN_USERS_FILTER = "admin_users_filter"
     const val ADMIN_USER_DETAIL = "admin_user_detail"
@@ -287,6 +301,26 @@ fun NearHouseApp() {
         }
     }
 
+    /** Cuenta suspendida: guarda el comprobante en memoria y abre "Apelar decisión". */
+    val abrirApelacionDeSuspension: (CuentaSuspendida) -> Unit = { info ->
+        info.token?.let { token ->
+            ApelacionEnCurso.iniciar(ObjetivoApelacion.Suspension(token, info.motivo, info.hasta))
+            navController.navigate(AppRoutes.APPEAL) { launchSingleTop = true }
+        }
+    }
+
+    // Cuenta suspendida (al entrar con Google): motivo, hasta cuándo y el botón "Apelar"
+    (googleAuthState as? GoogleAuthState.Suspendida)?.let { estado ->
+        CuentaSuspendidaDialog(
+            info = estado.info,
+            onAppeal = {
+                googleAuthViewModel.reiniciarEstado()
+                abrirApelacionDeSuspension(estado.info)
+            },
+            onDismiss = { googleAuthViewModel.reiniciarEstado() }
+        )
+    }
+
     (googleAuthState as? GoogleAuthState.RequiresReactivation)?.let { estado ->
         AlertDialog(
             onDismissRequest = { googleAuthViewModel.reiniciarEstado() },
@@ -323,6 +357,7 @@ fun NearHouseApp() {
         )
     }
 
+    /** Abre el perfil de un usuario. Si es el propio vendedor con sesión, lo lleva a "Mis anuncios". */
     val openUserProfile: (Int) -> Unit = { userId ->
         val esPropio = userId == sessionManager.getUserId()
         if (esPropio && sessionManager.getUserRole() == "VENDEDOR") {
@@ -332,17 +367,25 @@ fun NearHouseApp() {
         }
     }
 
+    /**
+     * Único punto de entrada para "Crear anuncio". Todas las pantallas lo usan.
+     * Decide según el usuario cargado: directo a crear, o a planes.
+     */
     var revisandoCupo by remember { mutableStateOf(false) }
     val irACrearAnuncio: () -> Unit = {
         if (!revisandoCupo) {
             revisandoCupo = true
             scope.launch {
                 try {
+                    // Si los datos del usuario no se han cargado (por ejemplo, llegó desde una notificación
+                    // sin pasar por Perfil), se piden primero; sin ellos parece comprador y lo mandaría a planes.
                     if (CurrentUserStore.user.value == null) {
                         runCatching { CurrentUserStore.refresh(authApi, sessionManager) }
                     }
                     when (destinoCrearAnuncio(CurrentUserStore.user.value)) {
                         DestinoCrearAnuncio.CREAR -> {
+                            // Si el plan ya llegó a su límite de anuncios activos, va a planes para elegir uno mayor.
+                            // Si no se puede revisar (sin internet), abre el formulario: el API vuelve a revisar al publicar.
                             val cupo = MyListingsRepository(context).cupo().getOrNull()
                             if (cupo?.codigo == CODIGO_LIMITE_ANUNCIOS) {
                                 navController.navigate("${AppRoutes.SUBSCRIPTION}?motivo=limite")
@@ -479,7 +522,22 @@ fun NearHouseApp() {
                 },
                 onGoogleAuthTokenReceived = { token ->
                     googleAuthViewModel.procesarTokenGoogle(token)
+                },
+                onAppealSuspension = { info ->
+                    entry.siEstaAlFrente { abrirApelacionDeSuspension(info) }
                 }
+            )
+        }
+
+        // Pantalla: Apelar decisión (anuncio retirado por un reporte o cuenta suspendida)
+        composable(AppRoutes.APPEAL) {
+            AppealScreen(
+                onBackClick = {
+                    ApelacionEnCurso.limpiar()
+                    navController.popBackStack()
+                },
+                // Regresa a donde se abrió: Mi perfil (se recarga sola) o el inicio de sesión
+                onAppealSubmitted = { navController.popBackStack() }
             )
         }
 
@@ -487,6 +545,7 @@ fun NearHouseApp() {
             SignUpScreen(
                 onNavigateToLogin = {
                     entry.siEstaAlFrente {
+                        // Regresa al login que ya estaba abajo; si no hay, lo abre en lugar del registro
                         if (!navController.popBackStack(AppRoutes.LOGIN, inclusive = false)) {
                             navController.navigate(AppRoutes.LOGIN) {
                                 popUpTo(AppRoutes.SIGN_UP) { inclusive = true }
@@ -516,6 +575,7 @@ fun NearHouseApp() {
             )
         }
 
+        // Pantalla Términos y Condiciones
         composable(AppRoutes.TERMS_AND_CONDITIONS) { entry ->
             TerminosCondicionesScreen(
                 onBackClick = {
@@ -524,6 +584,7 @@ fun NearHouseApp() {
             )
         }
 
+        // Pantalla Política de Privacidad
         composable(AppRoutes.PRIVACY_POLICY) { entry ->
             PoliticaPrivacidadScreen(
                 onBackClick = {
@@ -532,6 +593,7 @@ fun NearHouseApp() {
             )
         }
 
+        // Pantalla 3: Completa tu Perfil tradicional
         composable(AppRoutes.COMPLETE_PROFILE) {
             CompleteProfileScreen(
                 onCompleteProfileSuccess = { phoneNumber ->
@@ -541,6 +603,8 @@ fun NearHouseApp() {
             )
         }
 
+
+        // Pantalla 4: Verificación de Teléfono
         composable(
             route = "${AppRoutes.PHONE_VERIFICATION}/{phoneNumber}",
             arguments = listOf(navArgument("phoneNumber") { type = NavType.StringType })
@@ -553,6 +617,7 @@ fun NearHouseApp() {
                         popUpTo(AppRoutes.LOGIN) { inclusive = true }
                     }
                 },
+                // Registro con Google: se guarda la sesión y entra directo a la app
                 onSessionStarted = { sesion ->
                     sessionManager.saveSession(
                         token = sesion.token,
@@ -568,6 +633,7 @@ fun NearHouseApp() {
             )
         }
 
+        // Pantalla 5: Recuperación de contraseña
         composable(
             route = "${AppRoutes.FORGOT_PASSWORD}?email={email}",
             arguments = listOf(navArgument("email") { type = NavType.StringType; defaultValue = "" })
@@ -588,9 +654,14 @@ fun NearHouseApp() {
             )
         }
 
+        // Pantalla 6: Home (Lista de inmuebles)
         composable(AppRoutes.HOME) {
+            // NUEVO: Pedir permiso de notificaciones (Android 13+)
             PedirPermisoNotificaciones()
 
+            // Registrar este celular para recibir avisos cada vez que se llega a Home con sesión
+            // (login, registro, Google...). Sin esto, tras cerrar sesión e iniciar de nuevo,
+            // el servidor no tiene el token y no llegan notificaciones hasta reiniciar la app.
             LaunchedEffect(Unit) {
                 if (sessionManager.isLoggedIn()) {
                     TokenManager.registrarTokenActual(context, scope)
@@ -607,12 +678,14 @@ fun NearHouseApp() {
                     navController.navigate(AppRoutes.MAP) { launchSingleTop = true }
                 },
                 onFilterClick = {
+                    // launchSingleTop: un doble toque no abre Filtros dos veces
                     navController.navigate(AppRoutes.SEARCH_FILTERS) { launchSingleTop = true }
                 },
                 onBottomTabSelected = onBottomTab
             )
         }
 
+        // Pantalla: Propiedades guardadas
         composable(AppRoutes.SAVED) {
             SavedScreen(
                 reselectTrigger = savedReselectTrigger,
@@ -623,6 +696,7 @@ fun NearHouseApp() {
             )
         }
 
+        // Pantalla: Notificaciones
         composable(AppRoutes.NOTIFICATIONS) {
             val viewModel: NotificationsViewModel = viewModel(
                 factory = object : ViewModelProvider.Factory {
@@ -650,7 +724,12 @@ fun NearHouseApp() {
                                 navController.navigate("${AppRoutes.PUBLICACION_DETAIL}/$id")
                             }
                         }
+                        // Tus anuncios (en revisión, rechazado, retirado): "Mi perfil" en la pestaña Perfil
                         route == AppRoutes.MY_LISTINGS -> abrirMiPerfil()
+                        // Reporte a un usuario: su perfil
+                        route.startsWith("${AppRoutes.USER_PROFILE}/") -> {
+                            route.removePrefix("${AppRoutes.USER_PROFILE}/").toIntOrNull()?.let { openUserProfile(it) }
+                        }
                         else -> {
                             navController.navigate(route)
                         }
@@ -660,6 +739,7 @@ fun NearHouseApp() {
             )
         }
 
+        // Pantalla: Perfil
         composable(AppRoutes.PROFILE) {
             ProfileScreen(
                 reselectTrigger = profileReselectTrigger,
@@ -671,6 +751,7 @@ fun NearHouseApp() {
                 onTermsClick = { navController.navigate(AppRoutes.TERMS_AND_CONDITIONS) },
                 onPrivacyClick = { navController.navigate(AppRoutes.PRIVACY_POLICY) },
                 onLogoutClick = {
+                    // NUEVO: Borrar el token de la API antes de cerrar sesión
                     TokenManager.borrarTokenActual(context, scope) {
                         sessionManager.clearSession()
                         CurrentUserStore.clear()
@@ -689,6 +770,7 @@ fun NearHouseApp() {
             )
         }
 
+        // Pantalla: Mis Anuncios (Vendedor / Admin / SuperAdmin)
         composable(AppRoutes.MY_LISTINGS) {
             MyListingsScreen(
                 onBackClick = { navController.popBackStack() },
@@ -701,10 +783,19 @@ fun NearHouseApp() {
                 onPlanRequired = {
                     navController.navigate("${AppRoutes.SUBSCRIPTION}?motivo=perfil") { launchSingleTop = true }
                 },
+                onAppealClick = { item ->
+                    item.property.id.toIntOrNull()?.let { id ->
+                        ApelacionEnCurso.iniciar(
+                            ObjetivoApelacion.Publicacion(id, item.property.title, item.rejectionReason)
+                        )
+                        navController.navigate(AppRoutes.APPEAL) { launchSingleTop = true }
+                    }
+                },
                 onBottomTabSelected = onBottomTab
             )
         }
 
+        // Pantalla: Editar Perfil (Vendedor / Admin / SuperAdmin)
         composable(AppRoutes.EDIT_PROFILE) {
             EditProfileScreen(
                 onNavigateToMyListingsWithSnackbar = { message ->
@@ -724,6 +815,7 @@ fun NearHouseApp() {
             )
         }
 
+        // Flujo: Crear anuncio
         navigation(
             route = AppRoutes.CREATE_LISTING_GRAPH,
             startDestination = AppRoutes.CREATE_LISTING_STEP1
@@ -806,6 +898,8 @@ fun NearHouseApp() {
                     },
                     onFinished = {
                         vm.reset()
+                        // Regresa a "Mi perfil" de la pestaña Perfil sin abrir otra copia encima.
+                        // Si se llegó desde otro lado (por ejemplo, el detalle), se cierra el flujo y se abre ahí.
                         if (!navController.popBackStack(AppRoutes.MY_LISTINGS, inclusive = false)) {
                             navController.popBackStack(AppRoutes.CREATE_LISTING_GRAPH, inclusive = true)
                             abrirMiPerfil()
@@ -815,6 +909,7 @@ fun NearHouseApp() {
             }
         }
 
+        // Flujo: Editar anuncio (mismas pantallas, ViewModel con datos precargados)
         navigation(
             route = AppRoutes.CREATE_LISTING_EDIT,
             startDestination = AppRoutes.CREATE_LISTING_STEP1,
@@ -833,6 +928,7 @@ fun NearHouseApp() {
                     val listingId = parent.arguments?.getString("listingId")?.toIntOrNull()
                     val ctx = LocalContext.current
 
+                    // Variable de control para evitar que se muestre el formulario vacío
                     var haIntentadoCargar by remember(listingId) { mutableStateOf(false) }
 
                     LaunchedEffect(listingId) {
@@ -847,6 +943,8 @@ fun NearHouseApp() {
                     val state by vm.state.collectAsState()
                     val esperandoCarga = !haIntentadoCargar || state.loadingEdit
 
+                    // Envolvemos TODO en un Box con el color de fondo de la app.
+                    // Así no hay "flash" negro al entrar.
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -882,6 +980,7 @@ fun NearHouseApp() {
                                 }
                             }
                             else -> {
+                                // El formulario real, que ya tiene su propio Scaffold
                                 CreateListingStep1Screen(
                                     viewModel = vm,
                                     onExit = {
@@ -962,6 +1061,8 @@ fun NearHouseApp() {
                     },
                     onFinished = {
                         vm.reset()
+                        // Regresa a "Mi perfil" de la pestaña Perfil sin abrir otra copia encima.
+                        // Si se llegó desde otro lado (por ejemplo, el detalle), se cierra el flujo y se abre ahí.
                         if (!navController.popBackStack(AppRoutes.MY_LISTINGS, inclusive = false)) {
                             navController.popBackStack(AppRoutes.CREATE_LISTING_EDIT, inclusive = true)
                             abrirMiPerfil()
@@ -971,6 +1072,7 @@ fun NearHouseApp() {
             }
         }
 
+        // Pantalla: Detalle de publicación (única ruta)
         composable(
             route = "${AppRoutes.PUBLICACION_DETAIL}/{publicacionId}",
             arguments = listOf(navArgument("publicacionId") { type = NavType.StringType })
@@ -996,6 +1098,7 @@ fun NearHouseApp() {
             )
         }
 
+        // Pantalla: Perfil de otro usuario (anunciante, quien reportó o cuenta del panel)
         composable(
             route = "${AppRoutes.USER_PROFILE}/{userId}",
             arguments = listOf(navArgument("userId") { type = NavType.IntType })
@@ -1004,10 +1107,23 @@ fun NearHouseApp() {
             UserProfileScreen(
                 userId = userId,
                 onBackClick = { navController.popBackStack() },
+                onReportClick = {
+                    // Bandera del perfil: reportar a este usuario (sin sesión, primero a iniciar sesión)
+                    backStackEntry.siEstaAlFrente {
+                        if (!sessionManager.isLoggedIn()) {
+                            navController.navigate(AppRoutes.LOGIN)
+                        } else {
+                            navController.navigate("${AppRoutes.REPORT_GRAPH}/${ReportType.USUARIO.name}/$userId") {
+                                launchSingleTop = true
+                            }
+                        }
+                    }
+                },
                 onPropertyClick = { propertyId ->
                     navController.navigate("${AppRoutes.PUBLICACION_DETAIL}/$propertyId")
                 },
                 onManageAccountClick = {
+                    // Si se llegó desde el detalle de esa cuenta, solo se regresa (no se apilan pantallas)
                     val previous = navController.previousBackStackEntry?.destination?.route
                     if (previous?.startsWith(AppRoutes.ADMIN_USER_DETAIL) == true) {
                         navController.popBackStack()
@@ -1018,8 +1134,35 @@ fun NearHouseApp() {
             )
         }
 
+        // Pantalla: Panel de administración
         composable(AppRoutes.ADMIN_PANEL) {
             AdminPanelScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onNavigateToReports = {
+                    navController.navigate(AppRoutes.ADMIN_REPORTS)
+                },
+                onNavigateToUsers = {
+                    navController.navigate(AppRoutes.ADMIN_USERS)
+                },
+                onNavigateToAds = {
+                    navController.navigate(AppRoutes.ADMIN_LISTINGS)
+                },
+                onNavigateToAppeals = {
+                    navController.navigate(AppRoutes.ADMIN_APPEALS) { launchSingleTop = true }
+                },
+                onBottomTabSelected = onBottomTab
+            )
+        }
+
+        // Pantalla: Apelaciones (igual que Reportes)
+        composable(AppRoutes.ADMIN_APPEALS) {
+            AppealsScreen(
+                onBackClick = { navController.popBackStack() },
+                onAppealClick = { appealId ->
+                    navController.navigate("${AppRoutes.ADMIN_APPEAL_DETAIL}/$appealId") { launchSingleTop = true }
+                },
                 onBackClick = { navController.popBackStack() },
                 onNavigateToReports = { navController.navigate(AppRoutes.ADMIN_REPORTS) },
                 onNavigateToUsers = { navController.navigate(AppRoutes.ADMIN_USERS) },
@@ -1028,6 +1171,44 @@ fun NearHouseApp() {
             )
         }
 
+        // Pantalla: Detalle de la apelación
+        composable(
+            route = "${AppRoutes.ADMIN_APPEAL_DETAIL}/{appealId}",
+            arguments = listOf(navArgument("appealId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val appealId = backStackEntry.arguments?.getString("appealId") ?: ""
+            AppealDetailScreen(
+                appealId = appealId,
+                onBackClick = { navController.popBackStack() },
+                onNavigateToConfirmation = { id ->
+                    navController.navigate("${AppRoutes.ADMIN_APPEAL_CONFIRMATION}/$id") {
+                        popUpTo("${AppRoutes.ADMIN_APPEAL_DETAIL}/$appealId") { inclusive = true }
+                    }
+                },
+                onPropertyClick = { propertyId ->
+                    navController.navigate("${AppRoutes.PUBLICACION_DETAIL}/$propertyId")
+                },
+                onUserClick = { userId -> openUserProfile(userId) }
+            )
+        }
+
+        // Pantalla: Apelación resuelta
+        composable(
+            route = "${AppRoutes.ADMIN_APPEAL_CONFIRMATION}/{appealId}",
+            arguments = listOf(navArgument("appealId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val appealId = backStackEntry.arguments?.getString("appealId") ?: ""
+            AppealConfirmationScreen(
+                appealId = appealId,
+                onReturnToList = {
+                    navController.navigate(AppRoutes.ADMIN_APPEALS) {
+                        popUpTo(AppRoutes.ADMIN_APPEALS) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // Pantalla: Reportes
         composable(AppRoutes.ADMIN_REPORTS) {
             ReportsScreen(
                 onBackClick = { navController.popBackStack() },
@@ -1038,6 +1219,7 @@ fun NearHouseApp() {
             )
         }
 
+        // Pantalla: Usuarios (Admin). Lista real con búsqueda, filtros por rol y estatus, y paginación
         composable(AppRoutes.ADMIN_USERS) {
             UsersListScreen(
                 onBackClick = { navController.popBackStack() },
@@ -1048,6 +1230,7 @@ fun NearHouseApp() {
             )
         }
 
+        // Pantalla: Detalle de usuario (Admin), solo lectura
         composable(
             route = "${AppRoutes.ADMIN_USER_DETAIL}/{userId}",
             arguments = listOf(navArgument("userId") { type = NavType.StringType })
@@ -1057,6 +1240,7 @@ fun NearHouseApp() {
                 userId = userId,
                 onBackClick = { navController.popBackStack() },
                 onViewProfileClick = {
+                    // Igual que arriba: si venimos del perfil, regresamos a él
                     val previous = navController.previousBackStackEntry?.destination?.route
                     if (previous?.startsWith(AppRoutes.USER_PROFILE) == true) {
                         navController.popBackStack()
@@ -1067,6 +1251,7 @@ fun NearHouseApp() {
             )
         }
 
+        // Pantalla: Detalle del Reporte
         composable(
             route = "${AppRoutes.ADMIN_REPORT_DETAIL}/{reportId}",
             arguments = listOf(navArgument("reportId") { type = NavType.StringType })
@@ -1087,6 +1272,7 @@ fun NearHouseApp() {
             )
         }
 
+        // Pantalla: Confirmación de Reporte Atendido
         composable(
             route = "${AppRoutes.ADMIN_REPORT_CONFIRMATION}/{reportId}",
             arguments = listOf(navArgument("reportId") { type = NavType.StringType })
@@ -1102,6 +1288,7 @@ fun NearHouseApp() {
             )
         }
 
+        // Pantalla: Anuncios (administración)
         composable(AppRoutes.ADMIN_LISTINGS) { entry ->
             val message by entry.savedStateHandle
                 .getStateFlow<String?>(AppRoutes.LISTING_MESSAGE, null).collectAsState()
@@ -1115,6 +1302,7 @@ fun NearHouseApp() {
             )
         }
 
+        // Pantalla: Filtrar anuncios (comparte el ViewModel de la lista)
         composable(AppRoutes.ADMIN_LISTING_FILTERS) { entry ->
             val parent = remember(entry) { navController.getBackStackEntry(AppRoutes.ADMIN_LISTINGS) }
             ListingFiltersScreen(
@@ -1124,6 +1312,7 @@ fun NearHouseApp() {
             )
         }
 
+        // Pantalla: Detalle del anuncio
         composable(
             route = "${AppRoutes.ADMIN_LISTING_DETAIL}/{listingId}",
             arguments = listOf(navArgument("listingId") { type = NavType.StringType })
@@ -1143,6 +1332,7 @@ fun NearHouseApp() {
             )
         }
 
+        // Pantalla: Confirmación (Aprobar, Rechazar, Desactivar, Reactivar o Eliminar)
         composable(
             route = "${AppRoutes.ADMIN_LISTING_ACTION}/{listingId}/{action}",
             arguments = listOf(
@@ -1170,6 +1360,7 @@ fun NearHouseApp() {
             }
         }
 
+        // Pantalla: Mapa de inmuebles
         composable(AppRoutes.MAP) {
             MapScreen(
                 onToggleToList = {
@@ -1179,6 +1370,7 @@ fun NearHouseApp() {
                     }
                 },
                 onFilterClick = {
+                    // launchSingleTop: un doble toque no abre Filtros dos veces
                     navController.navigate(AppRoutes.SEARCH_FILTERS) { launchSingleTop = true }
                 },
                 onPropertyClick = { propertyId ->
@@ -1188,7 +1380,10 @@ fun NearHouseApp() {
             )
         }
 
+        // Pantalla: Filtros de búsqueda
         composable(AppRoutes.SEARCH_FILTERS) { entry ->
+            // Sale de Filtros una sola vez. Si se toca "Aplicar" o "Atrás" dos veces rápido,
+            // el segundo toque ya no saca también Inicio o el Mapa (eso dejaba la app en blanco).
             val salirDeFiltros = {
                 if (entry.lifecycle.currentState == Lifecycle.State.RESUMED) {
                     navController.popBackStack()
@@ -1200,21 +1395,32 @@ fun NearHouseApp() {
             )
         }
 
+        // Flujo: Reportar una publicación (desde su detalle) o a un usuario (desde la bandera de su perfil).
+        // El ViewModel se comparte entre las dos pantallas.
         navigation(
-            route = "${AppRoutes.REPORT_GRAPH}/{publicacionId}",
+            route = RUTA_REPORTE,
             startDestination = AppRoutes.REPORT_CATEGORY,
-            arguments = listOf(navArgument("publicacionId") { type = NavType.StringType })
+            arguments = listOf(
+                navArgument("tipo") { type = NavType.StringType },
+                navArgument("objetivoId") { type = NavType.StringType }
+            )
         ) {
             composable(AppRoutes.REPORT_CATEGORY) { entry ->
+                // El tipo y el id llegan al grafo padre, no a las pantallas hijas
+                val parentEntry = remember(entry) { navController.getBackStackEntry(RUTA_REPORTE) }
+                val tipo = parentEntry.arguments?.getString("tipo")
+                    ?.let { valor -> ReportType.entries.firstOrNull { it.name == valor } }
+                    ?: ReportType.PUBLICACION
+                val objetivoId = parentEntry.arguments?.getString("objetivoId") ?: ""
                 val parentEntry = remember(entry) {
                     navController.getBackStackEntry("${AppRoutes.REPORT_GRAPH}/{publicacionId}")
                 }
                 val publicacionId = parentEntry.arguments?.getString("publicacionId") ?: ""
                 val reportViewModel: ReportViewModel = viewModel(parentEntry)
 
-                LaunchedEffect(publicacionId) {
-                    reportViewModel.initPublicacion(publicacionId)
-                }
+                // Antes de dibujar la pantalla, para que no se vean ni un instante las categorías del otro tipo.
+                // Es seguro repetirlo: si ya era el mismo objetivo, no cambia nada.
+                remember(tipo, objetivoId) { reportViewModel.initObjetivo(tipo, objetivoId) }
 
                 ReportCategoryScreen(
                     viewModel = reportViewModel,
@@ -1224,17 +1430,15 @@ fun NearHouseApp() {
             }
 
             composable(AppRoutes.REPORT_REASON) { entry ->
-                val parentEntry = remember(entry) {
-                    navController.getBackStackEntry("${AppRoutes.REPORT_GRAPH}/{publicacionId}")
-                }
-                val publicacionId = parentEntry.arguments?.getString("publicacionId") ?: ""
+                val parentEntry = remember(entry) { navController.getBackStackEntry(RUTA_REPORTE) }
                 val reportViewModel: ReportViewModel = viewModel(parentEntry)
 
                 ReportReasonScreen(
                     viewModel = reportViewModel,
-                    publicacionId = publicacionId,
                     onBackClick = { navController.popBackStack() },
                     onReportSubmitted = {
+                        // Cierra todo el flujo y regresa a donde se abrió (detalle de la publicación o perfil)
+                        navController.popBackStack(RUTA_REPORTE, inclusive = true)
                         navController.popBackStack("${AppRoutes.REPORT_GRAPH}/{publicacionId}", inclusive = true)
                     }
                 )
@@ -1257,11 +1461,13 @@ fun NearHouseApp() {
             )
         }
 
+        // Planes: acepta ?motivo=crear cuando viene de "Crear anuncio"
         composable(
             route = "${AppRoutes.SUBSCRIPTION}?motivo={motivo}",
             arguments = listOf(navArgument("motivo") { type = NavType.StringType; defaultValue = "" })
         ) { entry ->
             val motivo = entry.arguments?.getString("motivo")
+            // "limite": su plan ya no tiene lugar para otro anuncio; al contratar uno mayor sigue a crear
             val motivoLimite = motivo == "limite"
             val motivoCrear = motivo == "crear" || motivoLimite
             ChoosePlanScreen(
@@ -1280,6 +1486,7 @@ fun NearHouseApp() {
             )
         }
 
+        // Checkout: al pagar, refresca el usuario y decide a dónde regresar
         composable(
             route = "${AppRoutes.CHECKOUT}/{planId}?motivo={motivo}",
             arguments = listOf(
@@ -1312,6 +1519,13 @@ fun NearHouseApp() {
         }
     }
 }
+
+/**
+ * Solo navega si esta pantalla es la que está al frente. Si se toca un botón dos veces rápido,
+ * el segundo toque ya no abre otra pantalla ni cierra una de más (eso dejaba la app en blanco).
+ */
+/** Ruta del flujo de reporte: tipo = PUBLICACION o USUARIO, objetivoId = id de la publicación o del usuario. */
+private const val RUTA_REPORTE = "${AppRoutes.REPORT_GRAPH}/{tipo}/{objetivoId}"
 
 private fun NavBackStackEntry.siEstaAlFrente(accion: () -> Unit) {
     if (lifecycle.currentState == Lifecycle.State.RESUMED) accion()
