@@ -1339,4 +1339,11 @@
     <string name="appeal_confirmation_desc">La resolución se guardó y ya le avisamos a quien apeló.</string>
     <string name="admin_conflict_listing">Este anuncio es tuyo. Lo debe revisar otro administrador.</string>
     <string name="admin_conflict_appeal">Esta apelación es tuya o es sobre una decisión que tomaste tú. La debe revisar otro administrador.</string>
+
+    <string name="pwd_rule_min_length">Mínimo 8 caracteres</string>
+    <string name="pwd_rule_uppercase">Una letra mayúscula</string>
+    <string name="pwd_rule_lowercase">Una letra minúscula</string>
+    <string name="pwd_rule_digit">Un número</string>
+    <string name="pwd_rule_special">Un carácter especial (! @ # $ % &amp; * ? . _ -)</string>
+    <string name="pwd_rule_no_sequences">Sin 3 caracteres seguidos en orden (abc, 123) ni repetidos (aaa, 111)</string>
 </resources>

@@ -1,5 +1,8 @@
 package com.equipo4.nearhome.ui.admin.reports
 
+import com.equipo4.nearhome.ui.common.NearHomeAlertDialog
+import com.equipo4.nearhome.ui.common.DialogTitle
+
 import com.equipo4.nearhome.ui.common.DetailBlocksSkeleton
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -65,10 +68,10 @@ fun ReportDetailScreen(
     // Un administrador no atiende reportes que hizo él, sobre su cuenta ni sobre sus publicaciones (el API también lo bloquea)
     val miId = remember { SessionManager(context).getUserId() }
     val esPropio = miId != null && (
-        reporterId == miId ||
-            targetProperty?.sellerId == miId ||
-            (report?.type == ReportType.USUARIO && report?.targetId == miId.toString())
-        )
+            reporterId == miId ||
+                    targetProperty?.sellerId == miId ||
+                    (report?.type == ReportType.USUARIO && report?.targetId == miId.toString())
+            )
     // Acción elegida: "PROCEDENTE" o "DESCARTADO". Null = no se muestra el diálogo
     var accion by remember { mutableStateOf<String?>(null) }
     // Evidencia abierta a pantalla completa (null = cerrado)
@@ -637,9 +640,9 @@ private fun ResolveReportDialog(
     val notaValida = nota.trim().isNotEmpty()
     val titulo = stringResource(if (procede) R.string.report_action_procede else R.string.report_common_discard)
 
-    AlertDialog(
+    NearHomeAlertDialog(
         onDismissRequest = { if (!enviando) onDismiss() },
-        title = { Text(titulo) },
+        title = { DialogTitle(titulo) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
@@ -698,9 +701,9 @@ private fun ResolveReportDialog(
     )
 
     if (confirmarRetiro) {
-        AlertDialog(
+        NearHomeAlertDialog(
             onDismissRequest = { confirmarRetiro = false },
-            title = { Text(stringResource(R.string.report_remove_confirm_title)) },
+            title = { DialogTitle(stringResource(R.string.report_remove_confirm_title)) },
             text = { Text(stringResource(R.string.report_remove_confirm_body)) },
             confirmButton = {
                 TextButton(

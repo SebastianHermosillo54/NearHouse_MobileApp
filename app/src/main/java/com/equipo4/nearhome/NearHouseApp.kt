@@ -1,5 +1,8 @@
 package com.equipo4.nearhome
 
+import com.equipo4.nearhome.ui.common.NearHomeAlertDialog
+import com.equipo4.nearhome.ui.common.DialogTitle
+
 import android.graphics.Color
 import android.widget.Toast
 import com.equipo4.nearhome.ui.theme.NearHomeTheme
@@ -322,10 +325,10 @@ fun NearHouseApp() {
     }
 
     (googleAuthState as? GoogleAuthState.RequiresReactivation)?.let { estado ->
-        AlertDialog(
+        NearHomeAlertDialog(
             onDismissRequest = { googleAuthViewModel.reiniciarEstado() },
             title = {
-                Text(
+                DialogTitle(
                     stringResource(
                         if (estado.esEliminacion) R.string.login_keep_title else R.string.login_reactivate_title
                     )
@@ -1086,7 +1089,7 @@ fun NearHouseApp() {
                     if (!sessionManager.isLoggedIn()) {
                         navController.navigate(AppRoutes.LOGIN)
                     } else {
-                        navController.navigate("${AppRoutes.REPORT_GRAPH}/$publicacionId")
+                        navController.navigate("${AppRoutes.REPORT_GRAPH}/${ReportType.PUBLICACION.name}/$publicacionId")
                     }
                 },
                 onEditClick = {
@@ -1163,10 +1166,6 @@ fun NearHouseApp() {
                 onAppealClick = { appealId ->
                     navController.navigate("${AppRoutes.ADMIN_APPEAL_DETAIL}/$appealId") { launchSingleTop = true }
                 },
-                onBackClick = { navController.popBackStack() },
-                onNavigateToReports = { navController.navigate(AppRoutes.ADMIN_REPORTS) },
-                onNavigateToUsers = { navController.navigate(AppRoutes.ADMIN_USERS) },
-                onNavigateToAds = { navController.navigate(AppRoutes.ADMIN_LISTINGS) },
                 onBottomTabSelected = onBottomTab
             )
         }
@@ -1406,20 +1405,13 @@ fun NearHouseApp() {
             )
         ) {
             composable(AppRoutes.REPORT_CATEGORY) { entry ->
-                // El tipo y el id llegan al grafo padre, no a las pantallas hijas
                 val parentEntry = remember(entry) { navController.getBackStackEntry(RUTA_REPORTE) }
                 val tipo = parentEntry.arguments?.getString("tipo")
                     ?.let { valor -> ReportType.entries.firstOrNull { it.name == valor } }
                     ?: ReportType.PUBLICACION
                 val objetivoId = parentEntry.arguments?.getString("objetivoId") ?: ""
-                val parentEntry = remember(entry) {
-                    navController.getBackStackEntry("${AppRoutes.REPORT_GRAPH}/{publicacionId}")
-                }
-                val publicacionId = parentEntry.arguments?.getString("publicacionId") ?: ""
                 val reportViewModel: ReportViewModel = viewModel(parentEntry)
 
-                // Antes de dibujar la pantalla, para que no se vean ni un instante las categorías del otro tipo.
-                // Es seguro repetirlo: si ya era el mismo objetivo, no cambia nada.
                 remember(tipo, objetivoId) { reportViewModel.initObjetivo(tipo, objetivoId) }
 
                 ReportCategoryScreen(
@@ -1437,9 +1429,7 @@ fun NearHouseApp() {
                     viewModel = reportViewModel,
                     onBackClick = { navController.popBackStack() },
                     onReportSubmitted = {
-                        // Cierra todo el flujo y regresa a donde se abrió (detalle de la publicación o perfil)
                         navController.popBackStack(RUTA_REPORTE, inclusive = true)
-                        navController.popBackStack("${AppRoutes.REPORT_GRAPH}/{publicacionId}", inclusive = true)
                     }
                 )
             }

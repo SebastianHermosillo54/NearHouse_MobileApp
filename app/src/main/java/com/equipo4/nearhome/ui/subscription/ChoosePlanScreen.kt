@@ -1,5 +1,8 @@
 package com.equipo4.nearhome.ui.subscription
 
+import com.equipo4.nearhome.ui.common.NearHomeAlertDialog
+import com.equipo4.nearhome.ui.common.DialogTitle
+
 import com.equipo4.nearhome.ui.common.PlanCardsSkeleton
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -40,7 +43,7 @@ fun ChoosePlanScreen(
     var mostrarDialogoCancelar by remember { mutableStateOf(false) }
 
     if (mostrarDialogoCancelar) {
-        AlertDialog(
+        NearHomeAlertDialog(
             onDismissRequest = {
                 if (!ui.guardando) mostrarDialogoCancelar = false
             },

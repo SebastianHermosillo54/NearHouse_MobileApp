@@ -28,6 +28,12 @@ data class DesactivarCuentaRequest(
     val googleToken: String? = null
 )
 
+/** Respuesta de POST /usuarios/me/eliminar */
+data class EliminarCuentaResponse(
+    val fechaEliminacion: String,          // ISO
+    val fechaEliminacionTexto: String      // ya formateada
+)
+
 data class CodigoContrasenaResponse(
     val correoOculto: String,
     val tieneContrasena: Boolean
@@ -240,6 +246,10 @@ interface AuthApi {
     @POST("api/v1/usuarios/me/desactivar")
     suspend fun desactivarCuenta(@Body request: DesactivarCuentaRequest): Response<Unit>
 
+    // NUEVO: Eliminar cuenta (programa el borrado a 30 días)
+    @POST("api/v1/usuarios/me/eliminar")
+    suspend fun eliminarCuenta(@Body request: DesactivarCuentaRequest): Response<EliminarCuentaResponse>
+
     // Cambio / Creación de contraseña
     @POST("api/v1/usuarios/me/contrasena/codigo")
     suspend fun solicitarCodigoContrasena(): Response<CodigoContrasenaResponse>
@@ -288,4 +298,8 @@ interface AuthApi {
 
     @POST("api/v1/usuarios/me/plan")
     suspend fun contratarPlan(@Body request: ContratarPlanRequest): Response<ContratarPlanResponse>
+
+    // NUEVO: Cancelar plan
+    @POST("api/v1/usuarios/me/plan/cancelar")
+    suspend fun cancelarPlan(): Response<ContratarPlanResponse>
 }

@@ -85,6 +85,10 @@ fun CheckoutScreen(
     }
 
     val eraComprador = remember { CurrentUserStore.roleOrNull() == UserRole.COMPRADOR }
+    val alFinalizar: (String) -> Unit = { planName ->
+        if (eraComprador) NotificacionesHelper.mostrarBienvenidaVendedor(context)
+        onSuccessFinished(planName)
+    }
     val viewModel: CheckoutViewModel = remember(plan) {
         CheckoutViewModel(plan, SubscriptionRepository(context))
     }
@@ -100,73 +104,6 @@ fun CheckoutScreen(
     val apiError by viewModel.apiError.collectAsState()
 
     var showErrors by remember { mutableStateOf(false) }
-
-    // ---- ESTADO DE ÉXITO ----
-    if (successMessage != null) {
-        // Bloquea el botón "Atrás" del celular para que no regrese al pago
-        BackHandler { /* No hacer nada */ }
-
-        LogroSonidoEffect()
-        LaunchedEffect(Unit) {
-            if (eraComprador) NotificacionesHelper.mostrarBienvenidaVendedor(context)
-        }
-
-        // Pantalla de logro a pantalla completa
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .navigationBarsPadding()
-                    .statusBarsPadding()
-                    .padding(horizontal = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(120.dp)
-                        .background(Color(0xFF52B768), shape = CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(64.dp)
-                    )
-                }
-                Spacer(Modifier.height(32.dp))
-                Text(
-                    text = "¡Plan actualizado!",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = "Tu plan ${plan.name} está activo.",
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(Modifier.height(48.dp))
-                Button(
-                    onClick = { onSuccessFinished(plan.name) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Continuar", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                }
-            }
-        }
-        return
-    }
 
     // ---- PANTALLA DE PAGO ----
     val cardNumberFocusRequester = remember { FocusRequester() }
@@ -399,7 +336,7 @@ fun CheckoutScreen(
                         keyboardActions = KeyboardActions(onDone = {
                             if (isComplete) {
                                 // Llamada corregida
-                                viewModel.submit { planName -> onSuccessFinished(planName) }
+                                viewModel.submit { planName -> alFinalizar(planName) }
                             } else {
                                 showErrors = true
                             }
@@ -421,7 +358,7 @@ fun CheckoutScreen(
                 onClick = {
                     if (isComplete) {
                         // Llamada corregida
-                        viewModel.submit { planName -> onSuccessFinished(planName) }
+                        viewModel.submit { planName -> alFinalizar(planName) }
                     } else {
                         showErrors = true
                     }

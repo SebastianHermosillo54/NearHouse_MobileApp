@@ -1,5 +1,8 @@
 package com.equipo4.nearhome.ui.appeal
 
+import com.equipo4.nearhome.ui.common.NearHomeAlertDialog
+import com.equipo4.nearhome.ui.common.DialogTitle
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.AlertDialog
@@ -24,9 +27,9 @@ fun CuentaSuspendidaDialog(
     onDismiss: () -> Unit
 ) {
     val hasta = info.hastaTexto(AppStrings.locale())
-    AlertDialog(
+    NearHomeAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.suspended_title)) },
+        title = { DialogTitle(stringResource(R.string.suspended_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (info.motivo.isNotBlank()) {

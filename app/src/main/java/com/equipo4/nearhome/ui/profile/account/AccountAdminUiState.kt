@@ -3,6 +3,7 @@ package com.equipo4.nearhome.ui.profile.account
 import android.util.Patterns
 import androidx.annotation.StringRes
 import com.equipo4.nearhome.ui.profile.UserRole
+import com.equipo4.nearhome.util.PasswordValidator
 
 data class UserAccountData(
     val email: String,
@@ -91,6 +92,18 @@ data class AccountAdminUiState(
     val isDeactivatedSuccess: Boolean = false,
     val showDeleteDialog: Boolean = false,
     val deleteInputText: String = "",
+
+    // NUEVO: Eliminación de cuenta
+    val deletePasswordInput: String = "",
+    val isDeleting: Boolean = false,
+    val isDeletedSuccess: Boolean = false,
+
+    // NUEVO: Cancelación de plan
+    val isCancellingPlan: Boolean = false,
+    val showCancelPlanDialog: Boolean = false,
+    val cancelPlanError: String? = null,
+    val deleteError: String? = null,
+
     @param:StringRes val userMessage: Int? = null,
     val snackbarSuccessMessage: String? = null
 ) {
@@ -102,12 +115,12 @@ data class AccountAdminUiState(
 
     val isNewPasswordFormValid: Boolean
         get() {
-            val hasMinLength = newPasswordInput.length >= 6
             val isConfirmed = newPasswordInput == confirmPasswordInput
             val hasCurrentPassword = userData?.tieneContrasena == true
             val currentPasswordValid = if (hasCurrentPassword) currentPasswordInput.isNotBlank() else true
             val isDifferentFromCurrent = if (hasCurrentPassword) newPasswordInput != currentPasswordInput else true
-            return hasMinLength && isConfirmed && currentPasswordValid && isDifferentFromCurrent && !isPasswordSaving
+            return PasswordValidator.isValid(newPasswordInput) &&
+                    isConfirmed && currentPasswordValid && isDifferentFromCurrent && !isPasswordSaving
         }
 
     val isNewEmailFormValid: Boolean
@@ -174,9 +187,17 @@ sealed interface AccountAdminUiEvent {
     data object OnDeactivateDismissed : AccountAdminUiEvent
 
     data object OnDeleteRequested : AccountAdminUiEvent
-    data object OnDeleteConfirmed : AccountAdminUiEvent
+    data class OnDeleteConfirmed(val googleToken: String? = null) : AccountAdminUiEvent
     data object OnDeleteDismissed : AccountAdminUiEvent
     data class OnDeleteInputChanged(val text: String) : AccountAdminUiEvent
+
+    // NUEVO: Cambio del campo de contraseña del diálogo de eliminar
+    data class OnDeletePasswordChanged(val text: String) : AccountAdminUiEvent
+
+    // NUEVO: Cancelar plan
+    data object OnCancelPlanConfirmed : AccountAdminUiEvent
+    data object OnCancelPlanRequested : AccountAdminUiEvent
+    data object OnCancelPlanDismissed : AccountAdminUiEvent
 
     data object OnUserMessageConsumed : AccountAdminUiEvent
     data object OnSnackbarMessageConsumed : AccountAdminUiEvent

@@ -18,6 +18,7 @@ import com.equipo4.nearhome.network.ValidarCambioTelefonoRequest
 import com.equipo4.nearhome.network.VerificarCodigoContrasenaRequest
 import com.equipo4.nearhome.ui.profile.UserRole
 import com.equipo4.nearhome.ui.subscription.PlanDates
+import com.equipo4.nearhome.util.PasswordValidator
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -110,6 +111,9 @@ class AccountAdminViewModel(application: Application) : AndroidViewModel(applica
             }
             is AccountAdminUiEvent.OnConfirmPhoneSmsSubmitted -> {
                 cambiarTelefono(event.tokenFirebase)
+            }
+            is AccountAdminUiEvent.OnDeletePasswordChanged -> {
+                _uiState.update { it.copy(deletePasswordInput = event.text, deactivateError = null) }
             }
 
             // --- Cambio de Correo ---
@@ -234,10 +238,8 @@ class AccountAdminViewModel(application: Application) : AndroidViewModel(applica
             is AccountAdminUiEvent.OnDeleteInputChanged -> {
                 _uiState.update { it.copy(deleteInputText = event.text) }
             }
-            AccountAdminUiEvent.OnDeleteConfirmed -> {
-                _uiState.update {
-                    it.copy(showDeleteDialog = false, deleteInputText = "", userMessage = R.string.coming_soon)
-                }
+            is AccountAdminUiEvent.OnDeleteConfirmed -> {
+                eliminarCuentaProgramada(event.googleToken)
             }
             AccountAdminUiEvent.OnUserMessageConsumed -> {
                 _uiState.update { it.copy(userMessage = null) }
@@ -245,11 +247,29 @@ class AccountAdminViewModel(application: Application) : AndroidViewModel(applica
             AccountAdminUiEvent.OnSnackbarMessageConsumed -> {
                 _uiState.update { it.copy(snackbarSuccessMessage = null) }
             }
+
+            // Cancelar plan: primero se pide confirmación, luego se llama a la API
+            AccountAdminUiEvent.OnCancelPlanRequested -> {
+                _uiState.update { it.copy(showCancelPlanDialog = true, cancelPlanError = null) }
+            }
+            AccountAdminUiEvent.OnCancelPlanDismissed -> {
+                _uiState.update { it.copy(showCancelPlanDialog = false, cancelPlanError = null) }
+            }
+            AccountAdminUiEvent.OnCancelPlanConfirmed -> {
+                cancelarPlan()
+            }
         }
     }
 
+    // ... (validarCambioTelefono, cambiarTelefono, solicitarCodigoCambioCorreo, confirmarCambioCorreo,
+    //      solicitarCodigoContrasena, verificarCodigoContrasena, guardarNuevaContrasena, startResendTimer,
+    //      startEmailResendTimer, limpiarEstadoMemoriaTelefono, limpiarEstadoMemoriaCorreo,
+    //      limpiarEstadoMemoriaContrasena, parseErrorMessage, onCleared) -- SE QUEDAN IGUAL.
+
+    // Vamos a pegarlos completos abajo:
     private fun validarCambioTelefono(googleToken: String?, onSuccessValidated: (String) -> Unit) {
         val currentState = _uiState.value
+        if (!PasswordValidator.isValid(currentState.newPasswordInput)) return
         val digits = currentState.newPhoneInput.filter { it.isDigit() }
         val fullPhone = currentState.countryCodeInput + digits
 
@@ -738,11 +758,99 @@ class AccountAdminViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
+    // Eliminar cuenta: con contraseña si la cuenta la tiene; si es de Google, con el token de Google
+    private fun eliminarCuentaProgramada(googleToken: String?) {
+        if (_uiState.value.isDeleting) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isDeleting = true, deleteError = null) }
+            try {
+                val request = DesactivarCuentaRequest(
+                    contrasena = _uiState.value.deletePasswordInput.takeIf { it.isNotBlank() },
+                    googleToken = googleToken
+                )
+                val response = authApi.eliminarCuenta(request)
+                val body = response.body()
+                if (response.isSuccessful && body != null) {
+                    sessionManager.clearSession()
+                    CurrentUserStore.clear()
+                    _uiState.update {
+                        it.copy(
+                            isDeleting = false,
+                            showDeleteDialog = false,
+                            deleteInputText = "",
+                            deletePasswordInput = "",
+                            isDeletedSuccess = true,
+                            snackbarSuccessMessage = "Tu cuenta se eliminará el ${body.fechaEliminacionTexto}. Si inicias sesión antes, se cancela."
+                        )
+                    }
+                } else {
+                    val errorMsg = parseErrorMessage(response.errorBody()?.string(), "No se pudo eliminar la cuenta")
+                    _uiState.update { it.copy(isDeleting = false, deleteError = errorMsg) }
+                }
+            } catch (_: IOException) {
+                _uiState.update {
+                    it.copy(
+                        isDeleting = false,
+                        deleteError = "No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo de nuevo"
+                    )
+                }
+            } catch (_: Exception) {
+                _uiState.update {
+                    it.copy(isDeleting = false, deleteError = "Ocurrió un error inesperado. Inténtalo de nuevo")
+                }
+            }
+        }
+    }
+
+    // Cancelar plan: el error se muestra dentro del diálogo de confirmación
+    private fun cancelarPlan() {
+        if (_uiState.value.isCancellingPlan) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isCancellingPlan = true, cancelPlanError = null) }
+            try {
+                val response = authApi.cancelarPlan()
+                val body = response.body()
+                if (response.isSuccessful && body != null) {
+                    sessionManager.saveToken(body.token)
+                    CurrentUserStore.clear()
+                    CurrentUserStore.refresh(authApi)
+                    _uiState.update {
+                        it.copy(
+                            isCancellingPlan = false,
+                            showCancelPlanDialog = false,
+                            snackbarSuccessMessage = "Plan cancelado. Tus anuncios ya no se ven."
+                        )
+                    }
+                } else {
+                    val errorMsg = parseErrorMessage(response.errorBody()?.string(), "No se pudo cancelar el plan")
+                    _uiState.update { it.copy(isCancellingPlan = false, cancelPlanError = errorMsg) }
+                }
+            } catch (_: IOException) {
+                _uiState.update {
+                    it.copy(
+                        isCancellingPlan = false,
+                        cancelPlanError = "No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo de nuevo"
+                    )
+                }
+            } catch (_: Exception) {
+                _uiState.update {
+                    it.copy(isCancellingPlan = false, cancelPlanError = "Ocurrió un error inesperado. Inténtalo de nuevo")
+                }
+            }
+        }
+    }
+
+    // La API manda un error general ("Los datos enviados no son válidos") y el motivo real en "detalles"
     private fun parseErrorMessage(rawError: String?, defaultMsg: String): String {
         if (rawError.isNullOrBlank()) return defaultMsg
         return try {
             val json = JSONObject(rawError)
-            json.optString("error", defaultMsg)
+            val detalles = json.optJSONArray("detalles")
+            if (detalles != null && detalles.length() > 0) {
+                detalles.optString(0, defaultMsg)
+            } else {
+                json.optString("error", defaultMsg)
+            }
         } catch (_: Exception) {
             defaultMsg
         }
