@@ -190,7 +190,7 @@ class CompleteProfileViewModel(
 
                 _uiState.update { it.copy(isLoading = false) }
 
-                val formattedDisplayPhone = "${updatedState.selectedCountry.code}${digits.substring(0, 3)}-${digits.substring(3, 6)}-${digits.substring(6)}"
+                val formattedDisplayPhone = "${updatedState.selectedCountry.code} ${digits.substring(0, 3)}-${digits.substring(3, 6)}-${digits.substring(6)}"
                 onSuccess(formattedDisplayPhone)
             } else {
                 val errorMsg = result.exceptionOrNull()?.message ?: AppStrings.get(R.string.cp_error_phone_taken)

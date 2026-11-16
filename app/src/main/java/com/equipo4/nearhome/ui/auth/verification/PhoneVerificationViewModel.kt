@@ -105,7 +105,10 @@ class PhoneVerificationViewModel(
 
         tokenFirebaseVerificado = null
         _uiState.update {
-            it.copy(isSending = true, canResend = false, otpCode = "", isError = false, errorMessage = null)
+            it.copy(
+                isSending = true, canResend = false, otpCode = "", isError = false, errorMessage = null,
+                codigoEnviado = false, errorDeEnvio = false
+            )
         }
 
         TelefonoFirebase.enviarCodigo(
@@ -119,7 +122,7 @@ class PhoneVerificationViewModel(
                 ) {
                     this@PhoneVerificationViewModel.verificationId = verificationId
                     this@PhoneVerificationViewModel.tokenReenvio = tokenReenvio
-                    _uiState.update { it.copy(isSending = false) }
+                    _uiState.update { it.copy(isSending = false, codigoEnviado = true) }
                     startResendTimer()
                 }
 
@@ -129,7 +132,7 @@ class PhoneVerificationViewModel(
                 }
 
                 override fun error(mensaje: String) {
-                    _uiState.update { it.copy(isSending = false) }
+                    _uiState.update { it.copy(isSending = false, errorDeEnvio = true) }
                     mostrarError(mensaje)
                     // Si era un reenvío, se respeta la espera antes de volver a pedir
                     if (reenvio) startResendTimer() else _uiState.update { it.copy(canResend = true) }
@@ -139,7 +142,10 @@ class PhoneVerificationViewModel(
                     // Firebase bloqueó los envíos por un tiempo: reintentar ahorita solo alarga el bloqueo
                     timerJob?.cancel()
                     _uiState.update {
-                        it.copy(isSending = false, canResend = false, timerSeconds = 0, reenvioBloqueado = true)
+                        it.copy(
+                            isSending = false, canResend = false, timerSeconds = 0,
+                            reenvioBloqueado = true, errorDeEnvio = true
+                        )
                     }
                     mostrarError(mensaje)
                 }

@@ -702,6 +702,8 @@
     <string name="complete_profile_select_country">Select country</string>
     <string name="phone_verify_title">Verify your number</string>
     <string name="phone_verify_sent">We have sent a verification code\nby SMS to the number: %1$s</string>
+    <string name="phone_verify_sending">Sending a verification code\nby SMS to the number: %1$s</string>
+    <string name="phone_verify_send_failed">We couldn\'t send the code by SMS\nto the number: %1$s</string>
     <string name="phone_verify_enter_code">Enter the code:</string>
     <string name="phone_verify_button">Verify number</string>
     <string name="phone_verify_no_code">Haven\'t received the code? </string>
@@ -1431,7 +1433,7 @@
     <!--  SMS: errores de Firebase y espera para reenviar  -->
     <string name="phone_sms_error_blocked">For security, Firebase paused SMS to this number or phone for a while because there were too many attempts in a row. Wait a few hours (it can take up to a day) and try again.</string>
     <string name="phone_sms_error_quota">The daily SMS limit has been reached. Please try again tomorrow.</string>
-    <string name="phone_sms_error_app_not_authorized">This copy of the app is not authorized to send SMS. Install the latest APK shared by the NearHouse team.</string>
+    <string name="phone_sms_error_app_not_authorized">The SMS could not be sent because Firebase has not authorized this version of the app. Let the NearHouse team know. (Code: %1$s)</string>
     <string name="phone_sms_error_send_code">The SMS could not be sent (%1$s). Please try again later.</string>
     <string name="phone_verify_sms_delay_hint">The SMS can take up to 2 minutes. Also check your spam or junk messages.</string>
     <string name="phone_verify_resend_blocked">Resend is not available right now</string>

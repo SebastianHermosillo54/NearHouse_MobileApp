@@ -708,6 +708,8 @@
     <string name="complete_profile_select_country">Seleccionar País</string>
     <string name="phone_verify_title">Verifica tu Número</string>
     <string name="phone_verify_sent">Hemos enviado un código de verificación\npor SMS al número: %1$s</string>
+    <string name="phone_verify_sending">Enviando un código de verificación\npor SMS al número: %1$s</string>
+    <string name="phone_verify_send_failed">No pudimos enviar el código por SMS\nal número: %1$s</string>
     <string name="phone_verify_enter_code">Introduce el código:</string>
     <string name="phone_verify_button">Verificar Número</string>
     <string name="phone_verify_no_code">¿No has recibido el código?. </string>
@@ -1443,7 +1445,7 @@
     <!--  SMS: errores de Firebase y espera para reenviar  -->
     <string name="phone_sms_error_blocked">Por seguridad, Firebase detuvo por un tiempo los SMS a este número o celular porque hubo muchos intentos seguidos. Espera unas horas (puede ser hasta un día) e intenta de nuevo.</string>
     <string name="phone_sms_error_quota">Por hoy ya se envió el máximo de SMS permitido. Intenta de nuevo mañana.</string>
-    <string name="phone_sms_error_app_not_authorized">Esta copia de la app no está autorizada para enviar SMS. Instala el APK más reciente que compartió el equipo de NearHouse.</string>
+    <string name="phone_sms_error_app_not_authorized">No se pudo enviar el SMS porque Firebase no tiene autorizada esta versión de la app. Avisa al equipo de NearHouse. (Código: %1$s)</string>
     <string name="phone_sms_error_send_code">No se pudo enviar el SMS (%1$s). Intenta de nuevo más tarde.</string>
     <string name="phone_verify_sms_delay_hint">El SMS puede tardar hasta 2 minutos. Revisa también tus mensajes de spam o no deseados.</string>
     <string name="phone_verify_resend_blocked">Reenviar no está disponible por ahora</string>

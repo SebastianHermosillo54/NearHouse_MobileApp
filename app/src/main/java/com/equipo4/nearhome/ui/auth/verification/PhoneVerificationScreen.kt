@@ -164,7 +164,14 @@ private fun VerificationInputContent(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = stringResource(R.string.phone_verify_sent, uiState.phoneNumber),
+                    text = stringResource(
+                        when {
+                            uiState.errorDeEnvio -> R.string.phone_verify_send_failed
+                            uiState.codigoEnviado -> R.string.phone_verify_sent
+                            else -> R.string.phone_verify_sending
+                        },
+                        uiState.phoneNumber
+                    ),
                     fontSize = 13.sp,
                     color = cs.onSurface,
                     textAlign = TextAlign.Center,
@@ -185,7 +192,8 @@ private fun VerificationInputContent(
                 OtpInputField(
                     otpCode = uiState.otpCode,
                     onOtpCodeChange = onOtpCodeChanged,
-                    isError = uiState.isError
+                    // Solo un código mal escrito pinta los cuadros; un error de envío se explica abajo
+                    isError = uiState.isError && !uiState.errorDeEnvio
                 )
 
                 if (uiState.isError && uiState.errorMessage != null) {

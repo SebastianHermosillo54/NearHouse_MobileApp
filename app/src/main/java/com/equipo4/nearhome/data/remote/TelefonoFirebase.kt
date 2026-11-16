@@ -68,6 +68,27 @@ object TelefonoFirebase {
         tokenReenvio: PhoneAuthProvider.ForceResendingToken?,
         eventos: Eventos,
     ) {
+        enviar(activity, telefono, tokenReenvio, eventos, conRecaptcha = usarRecaptcha)
+    }
+
+    /**
+     * Antes de mandar el SMS, Firebase revisa que la app sea legítima. Primero lo hace con
+     * Google Play (Play Integrity); en algunos celulares eso falla aunque la app esté bien
+     * configurada. Entonces se reintenta solo, sin mostrar error, con reCAPTCHA (una página
+     * que se abre un momento), y desde ahí se usa reCAPTCHA directo mientras la app siga abierta.
+     */
+    @Volatile
+    private var usarRecaptcha = false
+
+    private fun enviar(
+        activity: Activity,
+        telefono: String,
+        tokenReenvio: PhoneAuthProvider.ForceResendingToken?,
+        eventos: Eventos,
+        conRecaptcha: Boolean,
+    ) {
+        FirebaseAuth.getInstance().firebaseAuthSettings.forceRecaptchaFlowForTesting(conRecaptcha)
+
         val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
             override fun onCodeSent(
                 verificationId: String,
@@ -81,7 +102,13 @@ object TelefonoFirebase {
             }
 
             override fun onVerificationFailed(e: FirebaseException) {
-                Log.w(TAG, "No se pudo mandar el SMS: ${codigoDeError(e)}", e)
+                Log.w(TAG, "No se pudo mandar el SMS: ${codigoDeError(e)} (reCAPTCHA: $conRecaptcha)", e)
+                if (!conRecaptcha && codigoDeError(e) in CODIGOS_APP_NO_AUTORIZADA) {
+                    // Falló la revisión con Google Play: se intenta otra vez con reCAPTCHA
+                    usarRecaptcha = true
+                    enviar(activity, telefono, tokenReenvio, eventos, conRecaptcha = true)
+                    return
+                }
                 if (e is FirebaseTooManyRequestsException || codigoDeError(e) == "ERROR_QUOTA_EXCEEDED") {
                     eventos.bloqueado(mensajeAlEnviar(e))
                 } else {
@@ -140,7 +167,8 @@ object TelefonoFirebase {
                 if (e.message.orEmpty().contains("quota", ignoreCase = true)) AppStrings.get(R.string.phone_sms_error_quota)
                 else AppStrings.get(R.string.phone_sms_error_blocked)
             codigo == "ERROR_QUOTA_EXCEEDED" -> AppStrings.get(R.string.phone_sms_error_quota)
-            codigo in CODIGOS_APP_NO_AUTORIZADA -> AppStrings.get(R.string.phone_sms_error_app_not_authorized)
+            codigo in CODIGOS_APP_NO_AUTORIZADA ->
+                AppStrings.get(R.string.phone_sms_error_app_not_authorized, detalleDeError(e, codigo))
             codigo == "ERROR_INVALID_PHONE_NUMBER" -> AppStrings.get(R.string.phone_sms_error_invalid_number)
             e is FirebaseNetworkException -> AppStrings.get(R.string.phone_sms_error_network)
             e is FirebaseAuthInvalidCredentialsException -> AppStrings.get(R.string.phone_sms_error_invalid_number)
@@ -153,6 +181,22 @@ object TelefonoFirebase {
         (e as? FirebaseAuthException)?.errorCode
             ?: Regex("[A-Z][A-Z_]{5,}").find(e.message.orEmpty())?.value
             ?: e.javaClass.simpleName
+
+    /**
+     * Código de Firebase y, si su mensaje lo dice, qué verificación de la app falló.
+     * Se muestra en pantalla para diagnosticar con una simple captura, sin conectar el celular.
+     */
+    private fun detalleDeError(e: Exception, codigo: String): String {
+        val texto = e.message.orEmpty().lowercase()
+        val verificacion = when {
+            "play_integrity" in texto || "play integrity" in texto -> " · Play Integrity"
+            "recaptcha" in texto -> " · reCAPTCHA"
+            "sha-256" in texto || "sha256" in texto -> " · SHA-256"
+            "sha-1" in texto || "sha1" in texto -> " · SHA-1"
+            else -> ""
+        }
+        return codigo + verificacion
+    }
 
     private val CODIGOS_APP_NO_AUTORIZADA = setOf(
         "ERROR_APP_NOT_AUTHORIZED",
