@@ -1343,7 +1343,7 @@
     <string name="pwd_rule_lowercase">Una letra minúscula</string>
     <string name="pwd_rule_digit">Un número</string>
     <string name="pwd_rule_special">Un carácter especial (! @ # $ % &amp; * ? . _ -)</string>
-    <string name="pwd_rule_no_sequences">Sin 3 caracteres seguidos en orden (abc, 123) ni repetidos (aaa, 111)</string>
+    <string name="pwd_rule_no_sequences">Sin secuencias (abc, 123) ni repetidos (aaa)</string>
     <!--  Planes (cancelación), cuenta, recuperar contraseña y otros textos que estaban fijos  -->
     <string name="common_understood">Entendido</string>
     <string name="plan_status_cancelled">Cancelado</string>
@@ -1438,4 +1438,6 @@
     <!--  Compartir anuncio  -->
     <string name="detail_share_text">%1$s\n%2$s · %3$s\n\nMíralo en NearHouse: %4$s</string>
     <string name="detail_share_chooser">Compartir anuncio</string>
+
+    <string name="pwd_rules_title">Tu contraseña debe tener</string>
 </resources>
