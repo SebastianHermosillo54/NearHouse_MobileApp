@@ -311,30 +311,6 @@ fun LegalDocumentScreen(
 
                         Spacer(modifier = Modifier.height(32.dp))
 
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                                .padding(vertical = 24.dp, horizontal = 20.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    text = stringResource(R.string.legal_copyright),
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = stringResource(R.string.legal_rights_reserved),
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
                     }
                 }
             }
@@ -499,4 +475,3 @@ private fun FormattedLegalContent(
         }
     }
 }
-

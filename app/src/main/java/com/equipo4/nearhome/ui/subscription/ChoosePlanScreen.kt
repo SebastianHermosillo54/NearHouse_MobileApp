@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.equipo4.nearhome.R
+import com.equipo4.nearhome.ui.common.DialogTitle
+import com.equipo4.nearhome.ui.common.NearHomeAlertDialog
 import com.equipo4.nearhome.ui.common.NoConnectionState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -137,15 +139,9 @@ fun ChoosePlanScreen(
 
     // Confirmación: el plan ya no se renueva, pero los anuncios se ven hasta la fecha pagada
     ui.cancelacionHecha?.let { vence ->
-        AlertDialog(
+        NearHomeAlertDialog(
             onDismissRequest = viewModel::cerrarConfirmacionCancelacion,
-            title = {
-                Text(
-                    text = stringResource(R.string.plan_cancel_success_title),
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            },
+            title = { DialogTitle(text = stringResource(R.string.plan_cancel_success_title)) },
             text = {
                 Text(
                     text = stringResource(R.string.plan_cancel_success_body, PlanDates.formatear(vence, locale)),

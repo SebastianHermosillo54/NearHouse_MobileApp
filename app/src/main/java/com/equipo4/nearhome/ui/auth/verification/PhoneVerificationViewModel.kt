@@ -129,8 +129,10 @@ class PhoneVerificationViewModel(
                 }
 
                 override fun error(mensaje: String) {
-                    _uiState.update { it.copy(isSending = false, canResend = true) }
+                    _uiState.update { it.copy(isSending = false) }
                     mostrarError(mensaje)
+                    // Si era un reenvío, se respeta la espera de 60 s antes de volver a pedir
+                    if (reenvio) startResendTimer() else _uiState.update { it.copy(canResend = true) }
                 }
             }
         )

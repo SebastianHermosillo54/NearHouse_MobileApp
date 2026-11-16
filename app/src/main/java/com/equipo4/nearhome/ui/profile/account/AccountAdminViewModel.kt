@@ -268,7 +268,6 @@ class AccountAdminViewModel(application: Application) : AndroidViewModel(applica
     // Vamos a pegarlos completos abajo:
     private fun validarCambioTelefono(googleToken: String?, onSuccessValidated: (String) -> Unit) {
         val currentState = _uiState.value
-        if (!PasswordValidator.isValid(currentState.newPasswordInput)) return
         val digits = currentState.newPhoneInput.filter { it.isDigit() }
         val fullPhone = currentState.countryCodeInput + digits
 
@@ -335,9 +334,13 @@ class AccountAdminViewModel(application: Application) : AndroidViewModel(applica
     }
 
     private fun cambiarTelefono(tokenFirebase: String) {
-        val proof = _uiState.value.phoneProofToken ?: return
+        val estado = _uiState.value
+        // Evita dos peticiones: el SMS automático y el botón Verificar pueden llegar juntos
+        if (estado.isPhoneSaving) return
+        val proof = estado.phoneProofToken ?: return
+        // Se marca antes de lanzar la corrutina, así la segunda llamada ya ve que está guardando
+        _uiState.update { it.copy(isPhoneSaving = true, phoneSaveError = null) }
         viewModelScope.launch {
-            _uiState.update { it.copy(isPhoneSaving = true, phoneSaveError = null) }
             try {
                 val request = CambiarTelefonoRequest(comprobante = proof, tokenFirebase = tokenFirebase)
                 val response = authApi.cambiarTelefono(request)
