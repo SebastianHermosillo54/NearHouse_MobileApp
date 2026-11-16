@@ -729,8 +729,6 @@
     <string name="legal_transparency_title">Transparencia NearHouse</string>
     <string name="legal_transparency_body">Mantenemos nuestras políticas actualizadas para garantizar un entorno seguro, claro y confiable para todos nuestros usuarios.</string>
     <string name="legal_back_to_top">Volver arriba</string>
-    <string name="legal_copyright">NearHouse © 2026</string>
-    <string name="legal_rights_reserved">Todos los derechos reservados</string>
     <string name="property_image_format">Imagen %1$d</string>
     <string name="property_save_cd">Guardar propiedad</string>
     <string name="common_previous">Anterior</string>
@@ -886,7 +884,7 @@
     <string name="legal_terms_s11_title">Modificación de términos y condiciones</string>
     <string name="legal_terms_s11_content">Si cambiamos estos términos, te avisaremos dentro de la app con 15 días de anticipación. Si sigues usando NearHouse después de ese plazo, aceptas los cambios.</string>
     <string name="legal_terms_s12_title">Contacto</string>
-    <string name="legal_terms_s12_content">Si tienes dudas sobre estos términos, escríbenos a [CORREO DE CONTACTO].</string>
+    <string name="legal_terms_s12_content">Si tienes dudas sobre estos términos, escríbenos a nearhouse@robtonx.com.</string>
     <string name="legal_privacy_title">Política de privacidad</string>
     <string name="legal_privacy_updated">20 de octubre de 2026</string>
     <string name="legal_privacy_subtitle">Bienvenido a NearHouse. Este aviso de privacidad aplica a la aplicación NearHouse y a los servicios relacionados con ella (la \"Plataforma\"), desarrollada como proyecto académico.\n\nNos comprometemos a proteger tu privacidad. Este aviso explica cómo recolectamos, usamos, compartimos y protegemos tu información personal dentro de la app, conforme a la Ley Federal de Protección de Datos Personales en Posesión de los Particulares. Si no estás de acuerdo con este aviso, te recomendamos no usar la Plataforma.</string>

@@ -16,6 +16,11 @@ import org.junit.Test
  * Antes usaban AdminListingRepositoryFake, que se quitó al conectar la pantalla con la API;
  * ahora los datos de prueba se arman aquí mismo.
  */
+
+
+
+
+
 class AdminListingsLogicTest {
 
     private val mariana = Advertiser(id = 1, name = "Mariana López Hernández", email = "mariana@correo.com", verified = true)
