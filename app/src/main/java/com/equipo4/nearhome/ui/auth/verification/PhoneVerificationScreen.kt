@@ -244,12 +244,28 @@ private fun VerificationInputContent(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                // Mientras se espera: el SMS a veces tarda, y reenviar muy seguido hace que Firebase bloquee
+                if (!uiState.canResend && !uiState.reenvioBloqueado && uiState.timerSeconds > 0) {
+                    Text(
+                        text = stringResource(R.string.phone_verify_sms_delay_hint),
+                        fontSize = 12.sp,
+                        color = cs.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+
                 val footerNoCode = stringResource(R.string.phone_verify_no_code)
                 val footerResend = stringResource(R.string.phone_verify_resend)
                 val footerWait = stringResource(R.string.phone_verify_wait, uiState.timerSeconds)
+                val footerBlocked = stringResource(R.string.phone_verify_resend_blocked)
                 val annotatedFooter = buildAnnotatedString {
                     append(footerNoCode)
-                    if (uiState.canResend) {
+                    if (uiState.reenvioBloqueado) {
+                        withStyle(style = SpanStyle(color = cs.onSurfaceVariant)) {
+                            append(footerBlocked)
+                        }
+                    } else if (uiState.canResend) {
                         withStyle(style = SpanStyle(color = cs.primary, fontWeight = FontWeight.SemiBold)) {
                             append(footerResend)
                         }

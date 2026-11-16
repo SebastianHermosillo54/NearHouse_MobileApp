@@ -125,6 +125,7 @@ fun AccountAdminScreen(
     // Variables locales para el flujo de SMS de cambio de teléfono
     var smsVerificationId by remember { mutableStateOf<String?>(null) }
     var smsResendToken by remember { mutableStateOf<PhoneAuthProvider.ForceResendingToken?>(null) }
+    var smsBloqueado by remember { mutableStateOf(false) }
     var isSendingSms by remember { mutableStateOf(false) }
     var smsLocalError by remember { mutableStateOf<String?>(null) }
     var phoneOtpCode by remember { mutableStateOf(List(6) { "" }) }
@@ -152,7 +153,7 @@ fun AccountAdminScreen(
                     isSendingSms = false
                     smsVerificationId = verificationId
                     smsResendToken = tokenReenvio
-                    smsSegundos = 60
+                    smsSegundos = TelefonoFirebase.ESPERA_SEGUNDOS
                 }
 
                 override fun verificadoAutomaticamente(credencial: PhoneAuthCredential) {
@@ -168,6 +169,13 @@ fun AccountAdminScreen(
 
                 override fun error(mensaje: String) {
                     isSendingSms = false
+                    smsLocalError = mensaje
+                }
+
+                override fun bloqueado(mensaje: String) {
+                    // Firebase bloqueó los envíos por un tiempo: ya no se ofrece reenviar
+                    isSendingSms = false
+                    smsBloqueado = true
                     smsLocalError = mensaje
                 }
             }
@@ -633,11 +641,15 @@ fun AccountAdminScreen(
                         )
                     }
                     TextButton(
-                        enabled = smsSegundos == 0 && !isSendingSms && !uiState.isPhoneSaving,
+                        enabled = smsSegundos == 0 && !smsBloqueado && !isSendingSms && !uiState.isPhoneSaving,
                         onClick = { enviarSmsCuenta(targetPhone, smsResendToken) }
                     ) {
                         Text(
-                            text = if (smsSegundos > 0) "Reenviar código en ${smsSegundos}s" else "Reenviar código"
+                            text = when {
+                                smsBloqueado -> stringResource(R.string.phone_verify_resend_blocked)
+                                smsSegundos > 0 -> stringResource(R.string.acc_resend_code_in_format, smsSegundos)
+                                else -> stringResource(R.string.signup_resend_code)
+                            }
                         )
                     }
                 }

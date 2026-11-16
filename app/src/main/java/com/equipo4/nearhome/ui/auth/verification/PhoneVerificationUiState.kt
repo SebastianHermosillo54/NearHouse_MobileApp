@@ -1,6 +1,7 @@
 package com.equipo4.nearhome.ui.auth.verification
 
 import com.equipo4.nearhome.network.LoginResponse
+import com.equipo4.nearhome.data.remote.TelefonoFirebase
 
 data class PhoneVerificationUiState(
     val phoneNumber: String = "",
@@ -10,8 +11,10 @@ data class PhoneVerificationUiState(
     val isVerified: Boolean = false,
     val isLoading: Boolean = false,
     val isSending: Boolean = false, // mandando el SMS con Firebase
-    val timerSeconds: Int = 60,
+    val timerSeconds: Int = TelefonoFirebase.ESPERA_SEGUNDOS,
     val canResend: Boolean = false,
+    /** Firebase bloqueó los envíos por un tiempo: ya no se ofrece "Reenviar SMS" en esta pantalla. */
+    val reenvioBloqueado: Boolean = false,
     /** Registro con Google: la sesión que regresó la API (entra directo, sin pasar por el login). */
     val sesionNueva: LoginResponse? = null
 )

@@ -32,8 +32,12 @@ object TelefonoFirebase {
 
     private const val TAG = "TelefonoFirebase"
 
-    /** Segundos que Firebase espera el SMS antes de permitir reenviarlo. */
-    const val ESPERA_SEGUNDOS = 60
+    /**
+     * Segundos que se espera el SMS antes de permitir reenviarlo (Firebase acepta hasta 120).
+     * A veces el SMS tarda más de un minuto en llegar; si la gente reenvía muy seguido,
+     * Firebase bloquea ese número o ese celular por varias horas ("demasiados intentos").
+     */
+    const val ESPERA_SEGUNDOS = 120
 
     /** Lo que Firebase avisa mientras manda el SMS. */
     interface Eventos {
@@ -43,6 +47,14 @@ object TelefonoFirebase {
         fun verificadoAutomaticamente(credencial: PhoneAuthCredential)
 
         fun error(mensaje: String)
+
+        /**
+         * Firebase bloqueó los envíos por un tiempo (muchos intentos, o se acabaron los SMS del día).
+         * Volver a intentar en ese momento solo alarga el bloqueo, así que ya no se ofrece reenviar.
+         */
+        fun bloqueado(mensaje: String) {
+            this.error(mensaje)
+        }
     }
 
     /**
@@ -69,8 +81,12 @@ object TelefonoFirebase {
             }
 
             override fun onVerificationFailed(e: FirebaseException) {
-                Log.w(TAG, "No se pudo mandar el SMS", e)
-                eventos.error(mensajeAlEnviar(e))
+                Log.w(TAG, "No se pudo mandar el SMS: ${codigoDeError(e)}", e)
+                if (e is FirebaseTooManyRequestsException || codigoDeError(e) == "ERROR_QUOTA_EXCEEDED") {
+                    eventos.bloqueado(mensajeAlEnviar(e))
+                } else {
+                    eventos.error(mensajeAlEnviar(e))
+                }
             }
         }
 
@@ -110,12 +126,40 @@ object TelefonoFirebase {
         }
     }
 
-    private fun mensajeAlEnviar(e: FirebaseException): String = when (e) {
-        is FirebaseTooManyRequestsException -> AppStrings.get(R.string.phone_sms_error_too_many)
-        is FirebaseNetworkException -> AppStrings.get(R.string.phone_sms_error_network)
-        is FirebaseAuthInvalidCredentialsException -> AppStrings.get(R.string.phone_sms_error_invalid_number)
-        else -> AppStrings.get(R.string.phone_sms_error_send)
+    /**
+     * Mensaje según lo que contestó Firebase. Cada caso se arregla distinto:
+     * - muchos intentos: bloqueo temporal de Firebase para ese número o celular (solo queda esperar);
+     * - SMS del día agotados: límite del proyecto en Firebase;
+     * - app no autorizada: el APK se compiló en una computadora cuya huella (SHA) no está en Firebase.
+     * En cualquier otro caso se muestra el código de Firebase para poder buscarlo.
+     */
+    private fun mensajeAlEnviar(e: FirebaseException): String {
+        val codigo = codigoDeError(e)
+        return when {
+            e is FirebaseTooManyRequestsException ->
+                if (e.message.orEmpty().contains("quota", ignoreCase = true)) AppStrings.get(R.string.phone_sms_error_quota)
+                else AppStrings.get(R.string.phone_sms_error_blocked)
+            codigo == "ERROR_QUOTA_EXCEEDED" -> AppStrings.get(R.string.phone_sms_error_quota)
+            codigo in CODIGOS_APP_NO_AUTORIZADA -> AppStrings.get(R.string.phone_sms_error_app_not_authorized)
+            codigo == "ERROR_INVALID_PHONE_NUMBER" -> AppStrings.get(R.string.phone_sms_error_invalid_number)
+            e is FirebaseNetworkException -> AppStrings.get(R.string.phone_sms_error_network)
+            e is FirebaseAuthInvalidCredentialsException -> AppStrings.get(R.string.phone_sms_error_invalid_number)
+            else -> AppStrings.get(R.string.phone_sms_error_send_code, codigo)
+        }
     }
+
+    /** Código de Firebase (ej. ERROR_INVALID_APP_CREDENTIAL o BILLING_NOT_ENABLED). Nunca trae datos privados. */
+    private fun codigoDeError(e: Exception): String =
+        (e as? FirebaseAuthException)?.errorCode
+            ?: Regex("[A-Z][A-Z_]{5,}").find(e.message.orEmpty())?.value
+            ?: e.javaClass.simpleName
+
+    private val CODIGOS_APP_NO_AUTORIZADA = setOf(
+        "ERROR_APP_NOT_AUTHORIZED",
+        "ERROR_INVALID_APP_CREDENTIAL",
+        "ERROR_MISSING_APP_CREDENTIAL",
+        "ERROR_MISSING_CLIENT_IDENTIFIER"
+    )
 
     private fun mensajeAlVerificar(e: Exception): String {
         val codigoError = (e as? FirebaseAuthException)?.errorCode

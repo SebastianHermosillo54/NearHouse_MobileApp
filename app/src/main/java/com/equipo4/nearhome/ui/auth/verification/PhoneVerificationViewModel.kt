@@ -91,7 +91,7 @@ class PhoneVerificationViewModel(
     /** "Reenviar SMS" */
     fun onResendSmsClicked(activity: Activity) {
         val state = _uiState.value
-        if (state.canResend && !state.isSending && !state.isLoading) {
+        if (state.canResend && !state.reenvioBloqueado && !state.isSending && !state.isLoading) {
             enviarCodigo(activity, reenvio = true)
         }
     }
@@ -131,8 +131,17 @@ class PhoneVerificationViewModel(
                 override fun error(mensaje: String) {
                     _uiState.update { it.copy(isSending = false) }
                     mostrarError(mensaje)
-                    // Si era un reenvío, se respeta la espera de 60 s antes de volver a pedir
+                    // Si era un reenvío, se respeta la espera antes de volver a pedir
                     if (reenvio) startResendTimer() else _uiState.update { it.copy(canResend = true) }
+                }
+
+                override fun bloqueado(mensaje: String) {
+                    // Firebase bloqueó los envíos por un tiempo: reintentar ahorita solo alarga el bloqueo
+                    timerJob?.cancel()
+                    _uiState.update {
+                        it.copy(isSending = false, canResend = false, timerSeconds = 0, reenvioBloqueado = true)
+                    }
+                    mostrarError(mensaje)
                 }
             }
         )
