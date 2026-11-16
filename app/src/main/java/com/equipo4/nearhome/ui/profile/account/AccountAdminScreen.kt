@@ -49,6 +49,7 @@ import com.equipo4.nearhome.ui.common.PasswordRulesList
 import com.equipo4.nearhome.ui.profile.UserRole
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthProvider
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
@@ -127,6 +128,51 @@ fun AccountAdminScreen(
     var isSendingSms by remember { mutableStateOf(false) }
     var smsLocalError by remember { mutableStateOf<String?>(null) }
     var phoneOtpCode by remember { mutableStateOf(List(6) { "" }) }
+
+    // Cuenta regresiva para poder reenviar el SMS (60 s)
+    var smsSegundos by remember { mutableStateOf(0) }
+    LaunchedEffect(smsSegundos) {
+        if (smsSegundos > 0) {
+            delay(1000L)
+            smsSegundos -= 1
+        }
+    }
+
+    // Envía el SMS al teléfono nuevo, o lo reenvía con el token anterior
+    fun enviarSmsCuenta(telefono: String, tokenPrevio: PhoneAuthProvider.ForceResendingToken?) {
+        val act = activity ?: return
+        isSendingSms = true
+        smsLocalError = null
+        TelefonoFirebase.enviarCodigo(
+            activity = act,
+            telefono = telefono,
+            tokenReenvio = tokenPrevio,
+            eventos = object : TelefonoFirebase.Eventos {
+                override fun codigoEnviado(verificationId: String, tokenReenvio: PhoneAuthProvider.ForceResendingToken) {
+                    isSendingSms = false
+                    smsVerificationId = verificationId
+                    smsResendToken = tokenReenvio
+                    smsSegundos = 60
+                }
+
+                override fun verificadoAutomaticamente(credencial: PhoneAuthCredential) {
+                    coroutineScope.launch {
+                        try {
+                            val tokenFirebase = TelefonoFirebase.obtenerToken(credencial)
+                            onEvent(AccountAdminUiEvent.OnConfirmPhoneSmsSubmitted(tokenFirebase))
+                        } catch (e: Exception) {
+                            smsLocalError = e.message
+                        }
+                    }
+                }
+
+                override fun error(mensaje: String) {
+                    isSendingSms = false
+                    smsLocalError = mensaje
+                }
+            }
+        )
+    }
 
     uiState.userMessage?.let { messageRes ->
         val message = stringResource(id = messageRes)
@@ -482,38 +528,7 @@ fun AccountAdminScreen(
                             onEvent(AccountAdminUiEvent.OnValidatePhoneSubmitted(
                                 googleToken = googleToken,
                                 onSuccessValidated = { targetPhone ->
-                                    if (activity != null) {
-                                        isSendingSms = true
-                                        smsLocalError = null
-                                        TelefonoFirebase.enviarCodigo(
-                                            activity = activity,
-                                            telefono = targetPhone,
-                                            tokenReenvio = null,
-                                            eventos = object : TelefonoFirebase.Eventos {
-                                                override fun codigoEnviado(verificationId: String, tokenReenvio: PhoneAuthProvider.ForceResendingToken) {
-                                                    isSendingSms = false
-                                                    smsVerificationId = verificationId
-                                                    smsResendToken = tokenReenvio
-                                                }
-
-                                                override fun verificadoAutomaticamente(credencial: PhoneAuthCredential) {
-                                                    coroutineScope.launch {
-                                                        try {
-                                                            val tokenFirebase = TelefonoFirebase.obtenerToken(credencial)
-                                                            onEvent(AccountAdminUiEvent.OnConfirmPhoneSmsSubmitted(tokenFirebase))
-                                                        } catch (e: Exception) {
-                                                            smsLocalError = e.message
-                                                        }
-                                                    }
-                                                }
-
-                                                override fun error(mensaje: String) {
-                                                    isSendingSms = false
-                                                    smsLocalError = mensaje
-                                                }
-                                            }
-                                        )
-                                    }
+                                    enviarSmsCuenta(targetPhone, null)
                                 }
                             ))
                         }
@@ -617,14 +632,23 @@ fun AccountAdminScreen(
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                     }
+                    TextButton(
+                        enabled = smsSegundos == 0 && !isSendingSms && !uiState.isPhoneSaving,
+                        onClick = { enviarSmsCuenta(targetPhone, smsResendToken) }
+                    ) {
+                        Text(
+                            text = if (smsSegundos > 0) "Reenviar código en ${smsSegundos}s" else "Reenviar código"
+                        )
+                    }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
+                        if (uiState.isPhoneSaving) return@Button
                         val vid = smsVerificationId
                         if (vid == null) {
-                            onEvent(AccountAdminUiEvent.OnConfirmPhoneSmsSubmitted("123456"))
+                            smsLocalError = "Todavía no llega el código. Espera un momento o pide uno nuevo."
                         } else {
                             coroutineScope.launch {
                                 try {

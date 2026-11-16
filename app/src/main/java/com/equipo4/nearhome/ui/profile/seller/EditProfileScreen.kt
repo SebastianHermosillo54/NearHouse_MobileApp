@@ -52,12 +52,6 @@ fun EditProfileScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(uiState.role) {
-        if (uiState.role == UserRole.COMPRADOR) {
-            onNavigateToAccount()
-        }
-    }
-
     val updatedSuccessMsg = stringResource(R.string.edit_profile_updated_success)
 
     LaunchedEffect(uiState.isSaveSuccess) {
