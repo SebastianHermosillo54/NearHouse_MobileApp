@@ -51,12 +51,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -111,13 +114,53 @@ fun CheckoutScreen(
     val expiryFocusRequester = remember { FocusRequester() }
     val cvvFocusRequester = remember { FocusRequester() }
 
-    LaunchedEffect(cardNumber) {
-        if (cardNumber.text.filter { it.isDigit() }.length == 16) {
+    // Errores de cada campo (ver TarjetaValidacion). Los de "incompleto" solo se muestran
+    // cuando el usuario sale del campo o intenta pagar; los demás se muestran al momento.
+    val digitosTarjeta = cardNumber.text.filter { it.isDigit() }
+    val marca = TarjetaValidacion.marca(digitosTarjeta)
+    val errorNumero = TarjetaValidacion.errorNumero(digitosTarjeta)
+    val errorTitular = TarjetaValidacion.errorTitular(cardHolder.text)
+    val errorVencimiento = TarjetaValidacion.errorVencimiento(expiry.text.filter { it.isDigit() })
+    val errorCvv = TarjetaValidacion.errorCvv(cvv.text, digitosTarjeta)
+    val largoCvv = TarjetaValidacion.largoCvv(digitosTarjeta)
+
+    var tocadoNumero by remember { mutableStateOf(false) }
+    var tocadoTitular by remember { mutableStateOf(false) }
+    var tocadoVencimiento by remember { mutableStateOf(false) }
+    var tocadoCvv by remember { mutableStateOf(false) }
+
+    val mensajeNumero = when (errorNumero) {
+        ErrorNumeroTarjeta.MARCA_NO_ACEPTADA -> stringResource(R.string.checkout_card_brand)
+        ErrorNumeroTarjeta.NUMERO_INVALIDO -> stringResource(R.string.checkout_card_luhn)
+        ErrorNumeroTarjeta.INCOMPLETO ->
+            if (showErrors || tocadoNumero) stringResource(R.string.checkout_card_incomplete, marca?.longitud ?: 16) else null
+        null -> null
+    }
+    val mensajeTitular = when (errorTitular) {
+        ErrorTitular.VACIO -> if (showErrors || tocadoTitular) stringResource(R.string.checkout_holder_empty) else null
+        ErrorTitular.INCOMPLETO -> if (showErrors || tocadoTitular) stringResource(R.string.checkout_holder_incomplete) else null
+        null -> null
+    }
+    val mensajeVencimiento = when (errorVencimiento) {
+        ErrorVencimiento.MES_INVALIDO -> stringResource(R.string.checkout_expiry_month)
+        ErrorVencimiento.VENCIDA -> stringResource(R.string.checkout_expiry_past)
+        ErrorVencimiento.ANIO_INVALIDO -> stringResource(R.string.checkout_expiry_year)
+        ErrorVencimiento.INCOMPLETO ->
+            if (showErrors || tocadoVencimiento) stringResource(R.string.checkout_expiry_incomplete) else null
+        null -> null
+    }
+    val mensajeCvv = when (errorCvv) {
+        ErrorCvv.INCOMPLETO -> if (showErrors || tocadoCvv) stringResource(R.string.checkout_cvv_incomplete, largoCvv) else null
+        null -> null
+    }
+
+    LaunchedEffect(digitosTarjeta) {
+        if (digitosTarjeta.isNotEmpty() && errorNumero == null) {
             cardHolderFocusRequester.requestFocus()
         }
     }
-    LaunchedEffect(expiry) {
-        if (expiry.text.filter { it.isDigit() }.length == 4) {
+    LaunchedEffect(expiry.text) {
+        if (expiry.text.filter { it.isDigit() }.length == 4 && errorVencimiento == null) {
             cvvFocusRequester.requestFocus()
         }
     }
@@ -259,24 +302,28 @@ fun CheckoutScreen(
                     value = cardNumber,
                     onValueChange = viewModel::onCardNumberChanged,
                     placeholder = { Text(stringResource(R.string.checkout_card_number_hint)) },
+                    trailingIcon = marca?.let { m ->
+                        {
+                            Text(
+                                text = m.nombre,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = SubscriptionColors.textMuted,
+                                modifier = Modifier.padding(end = 12.dp)
+                            )
+                        }
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                     keyboardActions = KeyboardActions(onNext = { cardHolderFocusRequester.requestFocus() }),
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true,
-                    isError = showErrors && cardNumber.text.filter { it.isDigit() }.length < 16,
+                    isError = mensajeNumero != null,
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(cardNumberFocusRequester)
+                        .onFocusChanged { if (!it.isFocused && cardNumber.text.isNotEmpty()) tocadoNumero = true }
                 )
-                if (showErrors && cardNumber.text.filter { it.isDigit() }.length < 16) {
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = stringResource(R.string.checkout_card_invalid),
-                        fontSize = 11.sp,
-                        color = SubscriptionColors.errorStrong,
-                        modifier = Modifier.padding(start = 4.dp)
-                    )
-                }
+                MensajeErrorCampo(mensajeNumero)
             }
 
             Spacer(Modifier.height(12.dp))
@@ -289,15 +336,21 @@ fun CheckoutScreen(
                     value = cardHolder,
                     onValueChange = viewModel::onCardHolderChanged,
                     placeholder = { Text(stringResource(R.string.checkout_cardholder_hint)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Characters,
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Next
+                    ),
                     keyboardActions = KeyboardActions(onNext = { expiryFocusRequester.requestFocus() }),
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true,
-                    isError = showErrors && cardHolder.text.isBlank(),
+                    isError = mensajeTitular != null,
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(cardHolderFocusRequester)
+                        .onFocusChanged { if (!it.isFocused && cardHolder.text.isNotEmpty()) tocadoTitular = true }
                 )
+                MensajeErrorCampo(mensajeTitular)
             }
 
             Spacer(Modifier.height(12.dp))
@@ -318,11 +371,13 @@ fun CheckoutScreen(
                         keyboardActions = KeyboardActions(onNext = { cvvFocusRequester.requestFocus() }),
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true,
-                        isError = showErrors && expiry.text.filter { it.isDigit() }.length < 4,
+                        isError = mensajeVencimiento != null,
                         modifier = Modifier
                             .fillMaxWidth()
                             .focusRequester(expiryFocusRequester)
+                            .onFocusChanged { if (!it.isFocused && expiry.text.isNotEmpty()) tocadoVencimiento = true }
                     )
+                    MensajeErrorCampo(mensajeVencimiento)
                 }
 
                 Column(modifier = Modifier.weight(1f)) {
@@ -331,11 +386,11 @@ fun CheckoutScreen(
                     OutlinedTextField(
                         value = cvv,
                         onValueChange = viewModel::onCvvChanged,
-                        placeholder = { Text(stringResource(R.string.checkout_cvv_hint)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                        placeholder = { Text(if (largoCvv == 4) "1234" else stringResource(R.string.checkout_cvv_hint)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
+                        visualTransformation = PasswordVisualTransformation(),
                         keyboardActions = KeyboardActions(onDone = {
                             if (isComplete) {
-                                // Llamada corregida
                                 viewModel.submit { planName -> alFinalizar(planName) }
                             } else {
                                 showErrors = true
@@ -343,11 +398,13 @@ fun CheckoutScreen(
                         }),
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true,
-                        isError = showErrors && cvv.text.length < 3,
+                        isError = mensajeCvv != null,
                         modifier = Modifier
                             .fillMaxWidth()
                             .focusRequester(cvvFocusRequester)
+                            .onFocusChanged { if (!it.isFocused && cvv.text.isNotEmpty()) tocadoCvv = true }
                     )
+                    MensajeErrorCampo(mensajeCvv)
                 }
             }
 
@@ -425,4 +482,18 @@ fun CheckoutScreen(
             Spacer(Modifier.height(30.dp))
         }
     }
+}
+
+/** Mensaje de error debajo de un campo de la tarjeta (no ocupa espacio si no hay error). */
+@Composable
+private fun MensajeErrorCampo(mensaje: String?) {
+    if (mensaje == null) return
+    Spacer(Modifier.height(2.dp))
+    Text(
+        text = mensaje,
+        fontSize = 11.sp,
+        lineHeight = 14.sp,
+        color = SubscriptionColors.errorStrong,
+        modifier = Modifier.padding(start = 4.dp)
+    )
 }

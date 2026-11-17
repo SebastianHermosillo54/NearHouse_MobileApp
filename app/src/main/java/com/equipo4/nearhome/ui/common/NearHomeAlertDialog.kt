@@ -1,10 +1,8 @@
 package com.equipo4.nearhome.ui.common
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -82,14 +80,8 @@ fun NearHomeAlertDialog(
                     ) { text() }
                 }
                 Spacer(Modifier.height(24.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (dismissButton != null) dismissButton()
-                    confirmButton()
-                }
+                // Mismo ancho para los dos botones; si el texto no cabe, quedan uno debajo del otro
+                DialogButtonsLayout(confirmButton = confirmButton, dismissButton = dismissButton)
             }
         }
     }

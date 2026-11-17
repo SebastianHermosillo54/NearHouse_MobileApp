@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.equipo4.nearhome.R
+import com.equipo4.nearhome.ui.common.DialogButtons
 import com.equipo4.nearhome.ui.common.NearHomeBottomBar
 import com.equipo4.nearhome.ui.common.ProfileHeaderSkeleton
 import kotlinx.coroutines.launch
@@ -473,27 +474,13 @@ private fun LogoutDialog(onCancel: () -> Unit, onConfirm: () -> Unit) {
                     textAlign = TextAlign.Center
                 )
                 Spacer(Modifier.height(16.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = onCancel,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(6.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    ) { Text(stringResource(R.string.logout_cancel), fontSize = 13.sp) }
-                    Button(
-                        onClick = onConfirm,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(6.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError
-                        )
-                    ) { Text(stringResource(R.string.profile_logout), fontSize = 13.sp, maxLines = 1) }
-                }
+                DialogButtons(
+                    confirmText = stringResource(R.string.profile_logout),
+                    onConfirm = onConfirm,
+                    dismissText = stringResource(R.string.logout_cancel),
+                    onDismiss = onCancel,
+                    destructive = true
+                )
             }
         }
     }

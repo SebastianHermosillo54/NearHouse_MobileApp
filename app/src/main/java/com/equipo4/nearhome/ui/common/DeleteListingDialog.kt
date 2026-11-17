@@ -23,8 +23,6 @@ fun DeleteListingDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    val danger = Color(0xFFDC2626)
-
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(20.dp),
@@ -50,49 +48,14 @@ fun DeleteListingDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Button(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f).height(44.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.onSurface
-                        ),
-                        contentPadding = PaddingValues(horizontal = 8.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.listing_action_cancel),
-                            fontSize = 14.sp,
-                            maxLines = 1
-                        )
-                    }
-                    Button(
-                        onClick = onConfirm,
-                        modifier = Modifier.weight(1f).height(44.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = danger,
-                            contentColor = Color.White
-                        ),
-                        contentPadding = PaddingValues(horizontal = 8.dp)
-                    ) {
-                        Icon(
-                            Icons.Filled.Error,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = stringResource(R.string.manage_listing_confirm),
-                            fontSize = 14.sp,
-                            maxLines = 1
-                        )
-                    }
-                }
+                DialogButtons(
+                    confirmText = stringResource(R.string.manage_listing_confirm),
+                    onConfirm = onConfirm,
+                    dismissText = stringResource(R.string.listing_action_cancel),
+                    onDismiss = onDismiss,
+                    destructive = true,
+                    confirmIcon = Icons.Filled.Error
+                )
             }
         }
     }

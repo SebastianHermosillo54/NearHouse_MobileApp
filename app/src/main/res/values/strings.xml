@@ -1416,6 +1416,16 @@
     <string name="subscription_plan_active_format">Tu plan %1$s está activo.</string>
     <string name="checkout_card_invalid">! Formato inválido (16 dígitos)</string>
     <string name="checkout_required_fields">! Por favor, completa los campos obligatorios.</string>
+    <string name="checkout_card_incomplete">Escribe los %1$d dígitos de la tarjeta.</string>
+    <string name="checkout_card_brand">Solo se aceptan tarjetas Visa, Mastercard y American Express.</string>
+    <string name="checkout_card_luhn">El número de tarjeta no es válido. Revisa que esté bien escrito.</string>
+    <string name="checkout_holder_empty">Escribe el nombre del titular.</string>
+    <string name="checkout_holder_incomplete">Escribe nombre y apellido, como aparecen en la tarjeta.</string>
+    <string name="checkout_expiry_incomplete">Escribe el mes y el año (MM / AA).</string>
+    <string name="checkout_expiry_month">El mes debe estar entre 01 y 12.</string>
+    <string name="checkout_expiry_past">La tarjeta ya venció.</string>
+    <string name="checkout_expiry_year">El año de vencimiento no es válido.</string>
+    <string name="checkout_cvv_incomplete">Escribe los %1$d dígitos del CVV.</string>
     <string name="google_err_timeout">Google tardó demasiado en responder. Revisa tu conexión a internet e inténtalo de nuevo.</string>
     <string name="google_err_signin">No se pudo iniciar sesión con Google. Inténtalo de nuevo.</string>
     <string name="error_processing_request">Error al procesar la solicitud</string>

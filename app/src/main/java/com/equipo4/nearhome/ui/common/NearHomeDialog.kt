@@ -6,7 +6,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -28,8 +27,6 @@ fun NearHomeDialog(
     onDismiss: () -> Unit = {},
     destructive: Boolean = false
 ) {
-    val accent = if (destructive) Color(0xFFDC2626) else Color(0xFF41688F)
-
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(20.dp),
@@ -55,37 +52,13 @@ fun NearHomeDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    if (dismissText != null) {
-                        Button(
-                            onClick = onDismiss,
-                            modifier = Modifier.weight(1f).height(44.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                contentColor = MaterialTheme.colorScheme.onSurface
-                            ),
-                            contentPadding = PaddingValues(horizontal = 8.dp)
-                        ) {
-                            Text(text = dismissText, fontSize = 14.sp, maxLines = 1)
-                        }
-                    }
-                    Button(
-                        onClick = onConfirm,
-                        modifier = Modifier.weight(1f).height(44.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = accent,
-                            contentColor = Color.White
-                        ),
-                        contentPadding = PaddingValues(horizontal = 8.dp)
-                    ) {
-                        Text(text = confirmText, fontSize = 14.sp, maxLines = 1)
-                    }
-                }
+                DialogButtons(
+                    confirmText = confirmText,
+                    onConfirm = onConfirm,
+                    dismissText = dismissText,
+                    onDismiss = onDismiss,
+                    destructive = destructive
+                )
             }
         }
     }
