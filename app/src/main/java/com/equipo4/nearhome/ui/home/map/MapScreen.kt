@@ -72,8 +72,8 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.luminance
 import com.google.maps.android.compose.ComposeMapColorScheme
 
-private const val PIN_WIDTH_DP = 28
-private const val PIN_HEIGHT_DP = 39
+private const val PIN_WIDTH_DP = 40
+private const val PIN_HEIGHT_DP = 56
 
 object PinColors {
     val Todo = Color(0xFF808080)
