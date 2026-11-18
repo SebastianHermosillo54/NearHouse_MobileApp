@@ -6,6 +6,7 @@ import com.equipo4.nearhome.R
 import com.equipo4.nearhome.data.repository.Repositories
 import com.equipo4.nearhome.domain.model.AdminListing
 import com.equipo4.nearhome.domain.model.ListingAction
+import com.equipo4.nearhome.domain.model.ListingStatus
 import com.equipo4.nearhome.util.AppStrings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -43,6 +44,21 @@ class ListingActionViewModel(val listingId: String, val action: ListingAction) :
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    /**
+     * La acción debe seguir disponible para el estado del anuncio (por ejemplo, un anuncio
+     * rechazado ya no se puede aprobar). Si no, la pantalla avisa y no deja confirmar.
+     */
+    val permitida: Boolean = listing == null || action in ListingAction.availableFor(listing.status)
+
+    init {
+        if (!permitida) {
+            _error.value = AppStrings.get(
+                if (listing?.status == ListingStatus.RECHAZADO) R.string.listing_error_action_not_allowed
+                else R.string.listing_error_action_unavailable
+            )
+        }
+    }
+
     private var done = false
 
     fun setCheck(index: Int, value: Boolean) = _form.update { f ->
@@ -59,7 +75,7 @@ class ListingActionViewModel(val listingId: String, val action: ListingAction) :
     fun confirm(actor: String, onSuccess: () -> Unit) {
         val l = listing ?: return
         val form = _form.value
-        if (done || _submitting.value || !formularioCompleto(action, form)) return
+        if (done || !permitida || _submitting.value || !formularioCompleto(action, form)) return
 
         viewModelScope.launch {
             _submitting.value = true

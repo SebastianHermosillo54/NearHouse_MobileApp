@@ -21,6 +21,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -126,36 +127,61 @@ fun AdminListingDetailScreen(
 private fun RowScope.ActionButtons(listing: AdminListing, onActionClick: (ListingAction) -> Unit) {
     val danger = noticeColors(NoticeTone.DANGER).content
     val accent = adminAccent()
-    ListingAction.availableFor(listing.status).forEach { action ->
+    val acciones = ListingAction.availableFor(listing.status)
+    acciones.forEach { action ->
         val modifier = Modifier.weight(1f).height(48.dp)
         val label = stringResource(action.shortLabelRes())
-        when (action) {
-            ListingAction.APROBAR, ListingAction.REACTIVAR -> Button(
+        when {
+            // Solo queda eliminar (anuncio rechazado): botón rojo relleno a todo lo ancho
+            action == ListingAction.ELIMINAR && acciones.size == 1 -> Button(
                 onClick = { onActionClick(action) },
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = onAdminAccent()),
+                colors = ButtonDefaults.buttonColors(containerColor = danger, contentColor = Color.White),
                 contentPadding = PaddingValues(horizontal = 8.dp),
                 modifier = modifier
             ) { Text(label, maxLines = 1) }
 
-            ListingAction.ELIMINAR -> OutlinedButton(
-                onClick = { onActionClick(action) },
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, danger),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = danger),
-                contentPadding = PaddingValues(horizontal = 8.dp),
-                modifier = modifier
-            ) { Text(label, maxLines = 1) }
-
-            else -> OutlinedButton(
-                onClick = { onActionClick(action) },
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, accent),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = accent),
-                contentPadding = PaddingValues(horizontal = 8.dp),
-                modifier = modifier
-            ) { Text(label, maxLines = 1) }
+            else -> AccionNormal(action, label, modifier, danger, accent, onActionClick)
         }
+    }
+}
+
+/** Botones de siempre: aprobar/reactivar rellenos, eliminar con borde rojo y el resto con borde. */
+@Composable
+private fun AccionNormal(
+    action: ListingAction,
+    label: String,
+    modifier: Modifier,
+    danger: Color,
+    accent: Color,
+    onActionClick: (ListingAction) -> Unit
+) {
+    when (action) {
+        ListingAction.APROBAR, ListingAction.REACTIVAR -> Button(
+            onClick = { onActionClick(action) },
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = onAdminAccent()),
+            contentPadding = PaddingValues(horizontal = 8.dp),
+            modifier = modifier
+        ) { Text(label, maxLines = 1) }
+
+        ListingAction.ELIMINAR -> OutlinedButton(
+            onClick = { onActionClick(action) },
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, danger),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = danger),
+            contentPadding = PaddingValues(horizontal = 8.dp),
+            modifier = modifier
+        ) { Text(label, maxLines = 1) }
+
+        else -> OutlinedButton(
+            onClick = { onActionClick(action) },
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, accent),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = accent),
+            contentPadding = PaddingValues(horizontal = 8.dp),
+            modifier = modifier
+        ) { Text(label, maxLines = 1) }
     }
 }
 

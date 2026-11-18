@@ -301,6 +301,8 @@
     <string name="listing_action_deactivate">Deactivate</string>
     <string name="listing_action_reactivate">Reactivate</string>
     <string name="listing_action_delete">Delete</string>
+    <string name="listing_error_action_not_allowed">This listing was already rejected and can\'t be approved. The seller must edit it so it goes back to review.</string>
+    <string name="listing_error_action_unavailable">This action is no longer available for this listing.</string>
     <string name="listing_action_cancel">Cancel</string>
     <!--  Confirmaciones: parte común  -->
     <string name="listing_change_title">Status change</string>

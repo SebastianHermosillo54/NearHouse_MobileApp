@@ -302,6 +302,8 @@
     <string name="listing_action_deactivate">Desactivar</string>
     <string name="listing_action_reactivate">Reactivar</string>
     <string name="listing_action_delete">Eliminar</string>
+    <string name="listing_error_action_not_allowed">Este anuncio ya fue rechazado y no se puede aprobar. El vendedor debe corregirlo para que vuelva a revisión.</string>
+    <string name="listing_error_action_unavailable">Esta acción ya no está disponible para este anuncio.</string>
     <string name="listing_action_cancel">Cancelar</string>
     <!--  Confirmaciones: parte común  -->
     <string name="listing_change_title">Cambio de estado</string>

@@ -83,7 +83,7 @@ fun ListingActionScreen(
     val danger = noticeColors(NoticeTone.DANGER).content
     val accent = adminAccent()
     val destructiva = action == ListingAction.RECHAZAR || action == ListingAction.ELIMINAR
-    val puedeConfirmar = listing != null && !submitting && formularioValido(action, form)
+    val puedeConfirmar = listing != null && viewModel.permitida && !submitting && formularioValido(action, form)
     val colorConfirmar = if (destructiva) danger else accent
     val contenidoConfirmar = if (destructiva) Color.White else onAdminAccent()
 

@@ -24,7 +24,8 @@ enum class ListingAction {
             ListingStatus.PENDIENTE -> listOf(RECHAZAR, APROBAR, ELIMINAR)
             ListingStatus.ACTIVO -> listOf(DESACTIVAR, ELIMINAR)
             ListingStatus.DESACTIVADO -> listOf(REACTIVAR, ELIMINAR)
-            ListingStatus.RECHAZADO -> listOf(APROBAR, ELIMINAR)
+            // Un rechazado ya no se aprueba: el vendedor lo corrige y vuelve a revisión
+            ListingStatus.RECHAZADO -> listOf(ELIMINAR)
             ListingStatus.RENTADO_VENDIDO -> emptyList()
         }
     }
