@@ -438,6 +438,7 @@ private fun FormattedLegalContent(
                         fontSize = 14.sp,
                         lineHeight = 20.sp,
                         color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Justify,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -460,6 +461,7 @@ private fun FormattedLegalContent(
                         fontSize = 14.sp,
                         lineHeight = 20.sp,
                         color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Justify,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -468,7 +470,9 @@ private fun FormattedLegalContent(
                     text = linkifyEmails(trimmed),
                     fontSize = 14.sp,
                     lineHeight = 20.sp,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Justify,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }

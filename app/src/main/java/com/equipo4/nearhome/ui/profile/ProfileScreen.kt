@@ -47,8 +47,10 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.ui.platform.LocalContext
 import android.app.Activity
+import android.app.ActivityOptions
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import com.equipo4.nearhome.AppRoutes
 import com.equipo4.nearhome.MainActivity
 
@@ -494,13 +496,21 @@ private fun Modifier.noRippleClickable(onClick: () -> Unit): Modifier =
         onClick = onClick
     )
 
-/** Cierra y vuelve a abrir la app directo en Perfil, sin animación (para aplicar el idioma en todas las pantallas). */
+/**
+ * Vuelve a abrir la app directo en Perfil, sin animación (para aplicar el idioma en todas las pantallas).
+ * La pantalla nueva se abre dentro de la misma tarea, sin FLAG_ACTIVITY_CLEAR_TASK: así la pantalla
+ * actual sigue visible hasta que la nueva está lista y no aparece un pantallazo negro entre las dos.
+ */
 private fun reiniciarEnPerfil(activity: Activity) {
     val intent = Intent(activity, MainActivity::class.java)
         .setData(Uri.parse("nearhouse://${AppRoutes.PROFILE}"))
-        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-    activity.startActivity(intent)
+    val sinAnimacion = ActivityOptions.makeCustomAnimation(activity, 0, 0).toBundle()
+    activity.startActivity(intent, sinAnimacion)
     activity.finish()
-    @Suppress("DEPRECATION")
-    activity.overridePendingTransition(0, 0)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        activity.overrideActivityTransition(Activity.OVERRIDE_TRANSITION_CLOSE, 0, 0)
+    } else {
+        @Suppress("DEPRECATION")
+        activity.overridePendingTransition(0, 0)
+    }
 }
