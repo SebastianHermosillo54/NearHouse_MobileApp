@@ -4,6 +4,7 @@ import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.HTTP
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
@@ -145,9 +146,15 @@ interface PublicacionesApi {
     @POST("api/v1/admin/publicaciones/{id}/reactivar")
     suspend fun reactivarAdmin(@Path("id") id: Int): Response<Unit>
 
-    /** Elimina cualquier anuncio como administrador. Responde 204 sin cuerpo. */
-    @DELETE("api/v1/admin/publicaciones/{id}")
-    suspend fun eliminarAdmin(@Path("id") id: Int): Response<Unit>
+    /**
+     * Elimina cualquier anuncio como administrador. Responde 204 sin cuerpo.
+     * El motivo va en el cuerpo (DELETE con cuerpo) y se le avisa al dueño.
+     */
+    @HTTP(method = "DELETE", path = "api/v1/admin/publicaciones/{id}", hasBody = true)
+    suspend fun eliminarAdmin(
+        @Path("id") id: Int,
+        @Body body: MotivoDto
+    ): Response<Unit>
 
     /** Pausa (false) o reactiva (true) un anuncio propio ya publicado. */
     @PATCH("api/v1/publicaciones/{id}/activa")

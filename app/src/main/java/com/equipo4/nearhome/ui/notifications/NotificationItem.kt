@@ -82,7 +82,8 @@ fun NotificationItem(
                     TipoNotificacion.PLAN_CONTRATADO -> Icons.Default.CheckCircle
                     TipoNotificacion.PUBLICACION_APROBADA -> Icons.Default.CheckCircle
                     TipoNotificacion.PUBLICACION_RECHAZADA,
-                    TipoNotificacion.PUBLICACION_RETIRADA -> Icons.Default.Error
+                    TipoNotificacion.PUBLICACION_RETIRADA,
+                    TipoNotificacion.PUBLICACION_ELIMINADA -> Icons.Default.Error
                     TipoNotificacion.REPORTE_ENVIADO,
                     TipoNotificacion.REPORTE_ATENDIDO,
                     TipoNotificacion.REPORTE_DESCARTADO -> Icons.Default.Report
@@ -95,7 +96,8 @@ fun NotificationItem(
                     TipoNotificacion.PUBLICACION_APROBADA,
                     TipoNotificacion.APELACION_ACEPTADA -> MaterialTheme.colorScheme.primary
                     TipoNotificacion.PUBLICACION_RECHAZADA,
-                    TipoNotificacion.PUBLICACION_RETIRADA -> MaterialTheme.colorScheme.error
+                    TipoNotificacion.PUBLICACION_RETIRADA,
+                    TipoNotificacion.PUBLICACION_ELIMINADA -> MaterialTheme.colorScheme.error
                     else -> MaterialTheme.colorScheme.onSurfaceVariant
                 }
                 Icon(
@@ -192,9 +194,16 @@ private fun getNotificationText(notif: Notificacion): Pair<String, String> {
             stringResource(R.string.notif_title_report_discarded),
             stringResource(R.string.notif_body_report_discarded, notif.tituloPropiedad ?: "")
         )
+        // Con motivo: lo desactivó un administrador. Sin motivo: se retiró al atender un reporte
         TipoNotificacion.PUBLICACION_RETIRADA -> Pair(
             stringResource(R.string.notif_title_removed),
-            stringResource(R.string.notif_body_removed, notif.tituloPropiedad ?: "", notif.motivo ?: "")
+            if (notif.motivo.isNullOrBlank()) stringResource(R.string.notif_body_removed_report, notif.tituloPropiedad ?: "")
+            else stringResource(R.string.notif_body_removed, notif.tituloPropiedad ?: "", notif.motivo)
+        )
+        TipoNotificacion.PUBLICACION_ELIMINADA -> Pair(
+            stringResource(R.string.notif_title_deleted),
+            if (notif.motivo.isNullOrBlank()) stringResource(R.string.notif_body_deleted_no_reason, notif.tituloPropiedad ?: "")
+            else stringResource(R.string.notif_body_deleted, notif.tituloPropiedad ?: "", notif.motivo)
         )
         TipoNotificacion.APELACION_ENVIADA -> Pair(
             stringResource(R.string.notif_title_appeal_sent),

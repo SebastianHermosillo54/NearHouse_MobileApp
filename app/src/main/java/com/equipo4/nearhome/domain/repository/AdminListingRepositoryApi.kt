@@ -104,9 +104,9 @@ class AdminListingRepositoryApi(context: Context) : AdminListingRepository {
     }
 
     /** Elimina el anuncio de forma permanente y lo quita de la lista. */
-    override suspend fun eliminar(id: String): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun eliminar(id: String, motivo: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            val respuesta = api.eliminarAdmin(id.toInt())
+            val respuesta = api.eliminarAdmin(id.toInt(), MotivoDto(motivo.trim()))
             if (respuesta.isSuccessful || respuesta.code() == 204) {
                 _listings.update { lista -> lista.filterNot { it.id == id } }
                 Repositories.propiedades.refresh()

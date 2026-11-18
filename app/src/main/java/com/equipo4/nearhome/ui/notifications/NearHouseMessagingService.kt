@@ -43,7 +43,8 @@ class NearHouseMessagingService : FirebaseMessagingService() {
 
             "PUBLICACION_EN_REVISION",
             "PUBLICACION_RECHAZADA",
-            "PUBLICACION_RETIRADA" -> "my_listings"
+            "PUBLICACION_RETIRADA",
+            "PUBLICACION_ELIMINADA" -> "my_listings"
 
             "PUBLICACION_APROBADA",
             "REPORTE_ENVIADO",

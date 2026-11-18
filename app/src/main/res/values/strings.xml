@@ -1247,6 +1247,11 @@
     <string name="notif_body_report_attended">Tomamos medidas sobre “%1$s”. Gracias por ayudarnos a cuidar NearHouse.</string>
     <string name="notif_body_report_discarded">No encontramos que “%1$s” incumpla las reglas. Gracias por avisarnos.</string>
     <string name="notif_body_removed">“%1$s” ya no está visible porque no cumple las reglas de NearHouse. Motivo: %2$s.</string>
+    <string name="notif_body_removed_report">“%1$s” se retiró a raíz de un reporte.</string>
+    <!--  Anuncio eliminado por un administrador  -->
+    <string name="notif_title_deleted">Eliminamos tu publicación</string>
+    <string name="notif_body_deleted">Un administrador eliminó “%1$s”. Motivo: %2$s</string>
+    <string name="notif_body_deleted_no_reason">Un administrador eliminó “%1$s” porque no cumple las reglas de NearHouse.</string>
     <!--  Avisos de apelaciones  -->
     <string name="notif_title_appeal_sent">Apelación enviada</string>
     <string name="notif_body_appeal_sent">Un administrador revisará tu apelación sobre “%1$s”.</string>

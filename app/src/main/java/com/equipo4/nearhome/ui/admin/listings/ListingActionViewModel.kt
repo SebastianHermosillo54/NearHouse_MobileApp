@@ -69,7 +69,7 @@ class ListingActionViewModel(val listingId: String, val action: ListingAction) :
                 ListingAction.RECHAZAR -> repo.reject(l.id, form.text, actor)
                 ListingAction.DESACTIVAR -> repo.desactivar(l.id, form.text)
                 ListingAction.REACTIVAR -> repo.reactivar(l.id)
-                ListingAction.ELIMINAR -> repo.eliminar(l.id)
+                ListingAction.ELIMINAR -> repo.eliminar(l.id, form.text)
             }
             _submitting.value = false
             resultado

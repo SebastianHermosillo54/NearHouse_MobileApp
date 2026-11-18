@@ -9,11 +9,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.equipo4.nearhome.R
 import com.equipo4.nearhome.domain.model.UserAccountStatus
+import com.equipo4.nearhome.ui.common.DialogDangerColor
 
+/**
+ * Barra inferior del detalle de usuario: dos botones del mismo tamaño y forma.
+ * Bloquear (o Quitar suspensión) a la izquierda y Eliminar cuenta en rojo a la derecha,
+ * con el mismo rojo que los diálogos de eliminar.
+ */
 @Composable
 fun UserActionsBar(
     status: UserAccountStatus,
@@ -30,48 +37,59 @@ fun UserActionsBar(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val tamanoBoton = Modifier
+                .weight(1f)
+                .heightIn(min = 48.dp)
+
             if (status == UserAccountStatus.SUSPENDIDO) {
                 Button(
                     onClick = onUnsuspend,
-                    modifier = Modifier.weight(1f).height(46.dp),
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = tamanoBoton,
+                    shape = FormaBoton,
+                    contentPadding = RellenoBoton
                 ) {
-                    Text(
-                        text = stringResource(R.string.admin_user_action_unsuspend),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1
-                    )
+                    TextoBoton(stringResource(R.string.admin_user_action_unsuspend))
                 }
             } else {
                 OutlinedButton(
                     onClick = onBlock,
-                    modifier = Modifier.weight(1f).height(46.dp),
-                    shape = RoundedCornerShape(12.dp),
+                    modifier = tamanoBoton,
+                    shape = FormaBoton,
+                    contentPadding = RellenoBoton,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
                 ) {
-                    Text(
-                        text = stringResource(R.string.admin_user_action_block),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1
-                    )
+                    TextoBoton(stringResource(R.string.admin_user_action_block))
                 }
             }
 
-            TextButton(
+            OutlinedButton(
                 onClick = onDelete,
-                modifier = Modifier.weight(1f).height(46.dp)
+                modifier = tamanoBoton,
+                shape = FormaBoton,
+                contentPadding = RellenoBoton,
+                border = BorderStroke(1.dp, DialogDangerColor),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = DialogDangerColor)
             ) {
-                Text(
-                    text = stringResource(R.string.admin_user_action_delete),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.error,
-                    maxLines = 1
-                )
+                TextoBoton(stringResource(R.string.admin_user_action_delete))
             }
         }
     }
+}
+
+private val FormaBoton = RoundedCornerShape(12.dp)
+
+// Menos relleno a los lados que el normal (24 dp), para que "Bloquear / Suspender" quepa completo
+private val RellenoBoton = PaddingValues(horizontal = 8.dp, vertical = 10.dp)
+
+@Composable
+private fun TextoBoton(texto: String) {
+    Text(
+        text = texto,
+        fontSize = 14.sp,
+        lineHeight = 18.sp,
+        fontWeight = FontWeight.Medium,
+        textAlign = TextAlign.Center,
+        maxLines = 2
+    )
 }

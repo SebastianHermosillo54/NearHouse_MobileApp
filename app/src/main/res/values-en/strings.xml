@@ -1235,6 +1235,11 @@
     <string name="notif_body_report_attended">We took action on “%1$s”. Thanks for helping us keep NearHouse safe.</string>
     <string name="notif_body_report_discarded">We found that “%1$s” does not break the rules. Thanks for letting us know.</string>
     <string name="notif_body_removed">“%1$s” is no longer visible because it does not comply with NearHouse rules. Reason: %2$s.</string>
+    <string name="notif_body_removed_report">“%1$s” was removed after a report.</string>
+    <!--  Listing deleted by an administrator  -->
+    <string name="notif_title_deleted">We deleted your listing</string>
+    <string name="notif_body_deleted">An administrator deleted “%1$s”. Reason: %2$s</string>
+    <string name="notif_body_deleted_no_reason">An administrator deleted “%1$s” because it does not comply with NearHouse rules.</string>
     <!--  Appeal notices  -->
     <string name="notif_title_appeal_sent">Appeal sent</string>
     <string name="notif_body_appeal_sent">An administrator will review your appeal about “%1$s”.</string>

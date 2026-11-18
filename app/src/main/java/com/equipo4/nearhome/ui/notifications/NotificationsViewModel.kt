@@ -115,7 +115,8 @@ class NotificationsViewModel(
             TipoNotificacion.PLAN_CONTRATADO -> "account_admin"
             TipoNotificacion.PUBLICACION_EN_REVISION,
             TipoNotificacion.PUBLICACION_RECHAZADA,
-            TipoNotificacion.PUBLICACION_RETIRADA -> "my_listings"
+            TipoNotificacion.PUBLICACION_RETIRADA,
+            TipoNotificacion.PUBLICACION_ELIMINADA -> "my_listings"
             TipoNotificacion.PUBLICACION_APROBADA,
             TipoNotificacion.REPORTE_ENVIADO,
             TipoNotificacion.REPORTE_ATENDIDO,

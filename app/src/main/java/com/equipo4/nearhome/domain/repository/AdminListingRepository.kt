@@ -18,5 +18,6 @@ interface AdminListingRepository {
 
     suspend fun reactivar(id: String): Result<Unit>
 
-    suspend fun eliminar(id: String): Result<Unit>
+    /** [motivo] le llega al dueño del anuncio en el aviso de anuncio eliminado. */
+    suspend fun eliminar(id: String, motivo: String): Result<Unit>
 }
